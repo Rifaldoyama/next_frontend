@@ -133,7 +133,7 @@ export function useAdminPeminjaman() {
     if (!confirm("Yakin ingin menyetujui?")) return;
     await apiFetch(`/api/admin/peminjaman/${id}/status`, {
       method: "PATCH",
-      body: JSON.stringify({ status_pinjam: "DISETUJUI" }),
+      body: JSON.stringify({ status_pinjam: "SIAP_DIPROSES" }),
     });
     await fetchAll();
   }

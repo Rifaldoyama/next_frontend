@@ -1,50 +1,19 @@
+// src/components/organisms/admin/RecentTransactions.tsx
 "use client";
 
+import { useEffect, useState } from "react";
 import { Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 import Link from "next/link";
+import { apiFetch } from "@/lib/api";
 
-const recentTransactions = [
-  {
-    id: "TRX-001",
-    user: "John Doe",
-    item: "Canon EOS R6",
-    amount: "Rp 250.000",
-    status: "completed",
-    date: "2024-03-15",
-  },
-  {
-    id: "TRX-002",
-    user: "Jane Smith",
-    item: "Sony A7 III",
-    amount: "Rp 300.000",
-    status: "pending",
-    date: "2024-03-14",
-  },
-  {
-    id: "TRX-003",
-    user: "Mike Johnson",
-    item: "DJI Mini 3 Pro",
-    amount: "Rp 180.000",
-    status: "processing",
-    date: "2024-03-14",
-  },
-  {
-    id: "TRX-004",
-    user: "Sarah Williams",
-    item: "Rode NT1-A",
-    amount: "Rp 120.000",
-    status: "completed",
-    date: "2024-03-13",
-  },
-  {
-    id: "TRX-005",
-    user: "David Brown",
-    item: "GoPro Hero 11",
-    amount: "Rp 150.000",
-    status: "failed",
-    date: "2024-03-13",
-  },
-];
+interface Transaction {
+  id: string;
+  user: string;
+  item: string;
+  amount: string;
+  status: string;
+  date: string;
+}
 
 const statusConfig = {
   completed: { icon: CheckCircle, color: "text-green-600", bg: "bg-green-50" },
@@ -54,6 +23,63 @@ const statusConfig = {
 };
 
 export function RecentTransactions() {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
+
+  const fetchTransactions = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await apiFetch('/admin/dashboard/transactions');
+      setTransactions(data);
+    } catch (err) {
+      console.error('Failed to fetch transactions:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load transactions');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <div className="h-6 w-40 bg-gray-200 rounded animate-pulse"></div>
+          <div className="h-4 w-32 bg-gray-200 rounded mt-1 animate-pulse"></div>
+        </div>
+        <div className="p-6">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-16 bg-gray-100 rounded mb-2 animate-pulse"></div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-800">Recent Transactions</h3>
+        </div>
+        <div className="p-6 text-center">
+          <p className="text-red-600 mb-2">{error}</p>
+          <button
+            onClick={fetchTransactions}
+            className="text-blue-600 hover:text-blue-700 text-sm"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-300">
       <div className="px-6 py-4 border-b border-gray-200">
@@ -88,7 +114,7 @@ export function RecentTransactions() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {recentTransactions.map((transaction) => {
+            {transactions.map((transaction) => {
               const StatusIcon =
                 statusConfig[transaction.status as keyof typeof statusConfig]
                   .icon;
@@ -147,7 +173,6 @@ export function RecentTransactions() {
   );
 }
 
-// Helper function
 function cn(...classes: (string | undefined | false)[]) {
   return classes.filter(Boolean).join(" ");
 }

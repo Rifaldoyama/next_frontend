@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -8,27 +9,64 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  LineChart,
-  Line,
 } from "recharts";
-import { Calendar, TrendingUp } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 
-const activityData = [
-  { name: "Jan", loans: 12, returns: 8 },
-  { name: "Feb", loans: 19, returns: 14 },
-  { name: "Mar", loans: 15, returns: 16 },
-  { name: "Apr", loans: 22, returns: 18 },
-  { name: "May", loans: 28, returns: 24 },
-  { name: "Jun", loans: 32, returns: 28 },
-  { name: "Jul", loans: 35, returns: 32 },
-  { name: "Aug", loans: 38, returns: 35 },
-  { name: "Sep", loans: 42, returns: 38 },
-  { name: "Oct", loans: 45, returns: 42 },
-  { name: "Nov", loans: 48, returns: 44 },
-  { name: "Dec", loans: 52, returns: 48 },
-];
+interface ActivityData {
+  name: string;
+  loans: number;
+  returns: number;
+}
 
 export function ActivityChart() {
+  const [data, setData] = useState<ActivityData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchActivity();
+  }, []);
+
+  const fetchActivity = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await apiFetch('/admin/dashboard/activity');
+      setData(response);
+    } catch (err) {
+      console.error('Failed to fetch activity:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load activity data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="h-80 animate-pulse bg-gray-200 rounded"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="h-80 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-red-600 mb-2">{error}</p>
+            <button 
+              onClick={fetchActivity}
+              className="text-blue-600 hover:text-blue-700 text-sm"
+            >
+              Try again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-300">
       <div className="flex items-center justify-between mb-6">
@@ -53,7 +91,7 @@ export function ActivityChart() {
       <div className="h-80">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
-            data={activityData}
+            data={data}
             margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />

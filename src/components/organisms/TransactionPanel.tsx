@@ -35,6 +35,14 @@ export function TransactionPanel({ detail, onRefresh, onSuccess }: Props) {
   const [initialChoice, setInitialChoice] = useState<"DP" | "FULL" | null>(
     null,
   );
+  const hasDP = detail.pembayaran?.some((p: any) => p.tipe === "DP");
+
+  const getPaymentState = (payment?: any) => {
+    if (!payment) return "EMPTY";
+    if (payment.status === "PENDING") return "PENDING";
+    if (payment.status === "REJECTED") return "REJECTED";
+    if (payment.status === "VERIFIED") return "VERIFIED";
+  };
 
   // =============================
   // FLAGS
@@ -178,6 +186,28 @@ export function TransactionPanel({ detail, onRefresh, onSuccess }: Props) {
     }
   };
   const dp = detail.pembayaran?.find((p: any) => p.tipe === "DP");
+  const dpState = getPaymentState(dp);
+  const pelunasan = detail.pembayaran?.find((p: any) => p.tipe === "PELUNASAN");
+  const pelunasanState = getPaymentState(pelunasan);
+  const full = detail.pembayaran?.find((p: any) => p.tipe === "FULL");
+  const fullState = getPaymentState(full);
+
+  useEffect(() => {
+    if (dpState === "REJECTED") {
+      setSelectedRekeningDP("");
+      setFileDP(null);
+    }
+
+    if (pelunasanState === "REJECTED") {
+      setSelectedRekeningPelunasan("");
+      setFilePelunasan(null);
+    }
+
+    if (fullState === "REJECTED") {
+      setSelectedRekeningFull("");
+      setFileFull(null);
+    }
+  }, [dpState, pelunasanState, fullState]);
 
   const canUploadDP = dp?.status === "PENDING";
   const isRejectedDP = dp?.status === "REJECTED";
@@ -230,6 +260,18 @@ export function TransactionPanel({ detail, onRefresh, onSuccess }: Props) {
   // =============================
   // INITIAL CHOICE
   // =============================
+  if (
+    detail.metode_ambil === "DIANTAR" &&
+    detail.status_pinjam === "MENUNGGU_PERSETUJUAN"
+  ) {
+    return (
+      <Card className="p-4">
+        <div className="text-yellow-700 font-medium">
+          Menunggu persetujuan admin sebelum pembayaran bisa dilakukan
+        </div>
+      </Card>
+    );
+  }
 
   if (
     detail.status_bayar === "BELUM_BAYAR" &&
@@ -265,6 +307,7 @@ export function TransactionPanel({ detail, onRefresh, onSuccess }: Props) {
     depositAmount,
   );
 
+
   return (
     <Card className="space-y-6">
       <h3 className="font-bold text-lg">Transaksi</h3>
@@ -280,7 +323,7 @@ export function TransactionPanel({ detail, onRefresh, onSuccess }: Props) {
       {/* SECTION DP */}
       {/* ===================== */}
 
-      {!hasPaidDP && !fullPending && initialChoice === "DP" && (
+      {!hasPaidDP && !fullPending && (initialChoice === "DP" || hasDP) && (
         <div className="border p-4 rounded bg-yellow-50 space-y-3">
           <h4 className="font-semibold text-yellow-900">
             Pembayaran DP & Jaminan
@@ -303,10 +346,11 @@ export function TransactionPanel({ detail, onRefresh, onSuccess }: Props) {
                 <span>Rp {ongkir.toLocaleString()}</span>
               </div>
             )}
-            <div className="flex justify-between border-t border-yellow-300 pt-1 font-bold text-base">
+            {!dpPending && (<div className="flex justify-between border-t border-yellow-300 pt-1 font-bold text-base">
               <span>Total Bayar Sekarang:</span>
               <span>Rp {totalDP.toLocaleString()}</span>
             </div>
+            )}
           </div>
 
           <p className="text-[10px] text-yellow-700 italic">
@@ -314,51 +358,35 @@ export function TransactionPanel({ detail, onRefresh, onSuccess }: Props) {
             baik.
           </p>
 
-          <select
-            value={selectedRekeningDP}
-            onChange={(e) => setSelectedRekeningDP(e.target.value)}
-            className="w-full border p-2 rounded"
-          >
-            <option value="">Pilih rekening tujuan</option>
-
-            {rekeningList.map((rek) => (
-              <option key={rek.id} value={rek.id}>
-                {rek.nama} - {rek.nomor}
-              </option>
-            ))}
-          </select>
-
-          {/* BELUM ADA DP */}
-          {!dpPending && (
-            <Button disabled={loading} onClick={handleCreateDP}>
-              Buat Tagihan DP
-            </Button>
-          )}
-
-          {/* DP PENDING */}
-          {canUploadDP && (
+          {dpState === "PENDING" ? (
+            !dp?.bukti_pembayaran ? (
+              <>
+                <input type="file" onChange={(e) => setFileDP(e.target.files?.[0] || null)} />
+                <Button onClick={handleUploadDP}>Upload Bukti DP</Button>
+              </>
+            ) : (
+              <div>Menunggu verifikasi admin</div>
+            )
+          ) : (
             <>
-              {!dp?.bukti_pembayaran ? (
-                <>
-                  <input
-                    type="file"
-                    onChange={(e) => setFileDP(e.target.files?.[0] || null)}
-                  />
-
-                  <Button onClick={handleUploadDP}>Upload Bukti DP</Button>
-                </>
-              ) : (
-                <div>Menunggu verifikasi admin</div>
+              {dpState === "REJECTED" && (
+                <div className="text-red-600">DP ditolak, pilih ulang</div>
               )}
-            </>
-          )}
 
-          {/* DP REJECTED */}
-          {isRejectedDP && (
-            <>
-              <div className="text-red-600">Pembayaran ditolak</div>
+              <select
+                value={selectedRekeningDP}
+                onChange={(e) => setSelectedRekeningDP(e.target.value)}
+                className="w-full border p-2 rounded"
+              >
+                <option value="">Pilih rekening tujuan</option>
+                {rekeningList.map((rek) => (
+                  <option key={rek.id} value={rek.id}>
+                    {rek.nama} - {rek.nomor}
+                  </option>
+                ))}
+              </select>
 
-              <Button onClick={handleCreateDP}>Buat Ulang</Button>
+              <Button onClick={handleCreateDP}>Buat Tagihan DP</Button>
             </>
           )}
         </div>
@@ -372,45 +400,40 @@ export function TransactionPanel({ detail, onRefresh, onSuccess }: Props) {
         <div className="border p-4 rounded bg-blue-50 space-y-3">
           <h4 className="font-semibold">Pelunasan</h4>
 
-          {pelunasanRejected ? (
-            <>
-              <div className="text-red-600">
-                Pelunasan ditolak, silakan buat ulang
+          {pelunasanState === "PENDING" ? (
+            !pelunasan?.bukti_pembayaran ? (
+              <>
+                <input
+                  type="file"
+                  onChange={(e) =>
+                    setFilePelunasan(e.target.files?.[0] || null)
+                  }
+                />
+                <Button onClick={handleUploadPelunasan}>
+                  Upload Bukti Pelunasan
+                </Button>
+              </>
+            ) : (
+              <div className="text-blue-700">
+                Bukti sudah diupload, menunggu verifikasi admin
               </div>
-
-              <Button onClick={handleCreatePelunasan}>
-                Buat Ulang Pelunasan
-              </Button>
-            </>
-          ) : pelunasanPending ? (
-            <>
-              {!pelunasanPending.bukti_pembayaran ? (
-                <>
-                  <input
-                    type="file"
-                    onChange={(e) =>
-                      setFilePelunasan(e.target.files?.[0] || null)
-                    }
-                  />
-                  <Button onClick={handleUploadPelunasan}>
-                    Upload Bukti Pelunasan
-                  </Button>
-                </>
-              ) : (
-                <div className="text-blue-700">
-                  Bukti sudah diupload, menunggu verifikasi admin
-                </div>
-              )}
-            </>
+            )
           ) : (
             <>
+              {pelunasanState === "REJECTED" && (
+                <div className="text-red-600">
+                  Pelunasan ditolak, silakan pilih rekening ulang
+                </div>
+              )}
+
               <select
                 value={selectedRekeningPelunasan}
-                onChange={(e) => setSelectedRekeningPelunasan(e.target.value)}
+                onChange={(e) =>
+                  setSelectedRekeningPelunasan(e.target.value)
+                }
                 className="w-full border p-2 rounded"
               >
                 <option value="">Pilih rekening tujuan</option>
-
                 {rekeningList.map((rek) => (
                   <option key={rek.id} value={rek.id}>
                     {rek.nama} - {rek.nomor}
@@ -434,34 +457,31 @@ export function TransactionPanel({ detail, onRefresh, onSuccess }: Props) {
         <div className="border p-4 rounded bg-green-50 space-y-3">
           <h4 className="font-semibold">Pembayaran Full</h4>
 
-          {fullRejected ? (
-            <>
-              <div className="text-red-600">
-                Pembayaran full ditolak, silakan buat ulang
+          {fullState === "PENDING" ? (
+            !full?.bukti_pembayaran ? (
+              <>
+                <input
+                  type="file"
+                  onChange={(e) => setFileFull(e.target.files?.[0] || null)}
+                />
+                <Button onClick={handleUploadFull}>
+                  Upload Bukti Full
+                </Button>
+              </>
+            ) : (
+              <div className="text-green-700">
+                Bukti sudah diupload, menunggu verifikasi admin
               </div>
-
-              <Button onClick={handleCreateFull}>
-                Buat Ulang Full Payment
-              </Button>
-            </>
-          ) : fullPending ? (
-            <>
-              {!fullPending.bukti_pembayaran ? (
-                <>
-                  <input
-                    type="file"
-                    onChange={(e) => setFileFull(e.target.files?.[0] || null)}
-                  />
-                  <Button onClick={handleUploadFull}>Upload Bukti Full</Button>
-                </>
-              ) : (
-                <div className="text-green-700">
-                  Bukti sudah diupload, menunggu verifikasi admin
-                </div>
-              )}
-            </>
+            )
           ) : (
             <>
+              {fullState === "REJECTED" && (
+                <div className="text-red-600">
+                  Pembayaran ditolak, silakan pilih ulang
+                </div>
+              )}
+
+              {/* RINCIAN */}
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
                   <span>Total Sewa:</span>
@@ -488,6 +508,7 @@ export function TransactionPanel({ detail, onRefresh, onSuccess }: Props) {
                 </div>
               </div>
 
+              {/* SELECT */}
               <select
                 value={selectedRekeningFull}
                 onChange={(e) => setSelectedRekeningFull(e.target.value)}
@@ -501,7 +522,9 @@ export function TransactionPanel({ detail, onRefresh, onSuccess }: Props) {
                 ))}
               </select>
 
-              <Button onClick={handleCreateFull}>Buat Tagihan Full</Button>
+              <Button onClick={handleCreateFull}>
+                Buat Tagihan Full
+              </Button>
             </>
           )}
         </div>

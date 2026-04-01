@@ -5,6 +5,7 @@ import { Button } from "@/components/atoms/Buttons";
 import { useAdminZona } from "@/hooks/admin/useAdminZona";
 import { useAdminPeminjaman } from "@/hooks/admin/useAdminPeminjaman";
 import { formatRupiah } from "@/lib/format";
+import { showError } from "@/lib/alert";
 
 interface Props {
   open: boolean;
@@ -25,7 +26,7 @@ export function PeminjamanDetailModal({
   reject,
   setSelected,
 }: Props) {
-  const { zona } = useAdminZona();
+  const { zona, fetchZona } = useAdminZona();
   const [selectedZona, setSelectedZona] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -38,6 +39,7 @@ export function PeminjamanDetailModal({
 
   if (!open || !currentData) return null;
 
+
   async function handleAssign() {
     if (!currentData || !selectedZona) return;
     setIsSubmitting(true);
@@ -46,7 +48,7 @@ export function PeminjamanDetailModal({
       // dan karena currentData adalah props, dia otomatis terupdate!
       await setZona(currentData.id, selectedZona);
     } catch (error) {
-      alert("Gagal memperbarui zona");
+      showError("Gagal memperbarui zona");
     } finally {
       setIsSubmitting(false);
     }
@@ -123,7 +125,7 @@ export function PeminjamanDetailModal({
                   value={selectedZona}
                   onChange={(e) => setSelectedZona(e.target.value)}
                   disabled={
-                    currentData.status_pinjam !== "DIAJUKAN" || isSubmitting
+                    currentData.status_pinjam !== "MENUNGGU_PERSETUJUAN" || isSubmitting
                   }
                 >
                   <option value="">-- Pilih Zona Pengiriman --</option>
@@ -250,7 +252,7 @@ export function PeminjamanDetailModal({
         {/* Footer */}
         <div className="p-4 border-t bg-gray-50 flex justify-end">
           <div className="flex gap-2">
-            {currentData.status_pinjam === "DIAJUKAN" && (
+            {currentData.status_pinjam === "MENUNGGU_PERSETUJUAN" && (
               <>
                 <Button
                   variant="primary"

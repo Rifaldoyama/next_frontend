@@ -23,6 +23,7 @@ export function useAdminZona() {
     try {
 
       const data = await apiFetch("/api/admin/zona");
+      console.log("ZONA FROM HOOK:", data);
 
       setZona(data ?? []);
 
