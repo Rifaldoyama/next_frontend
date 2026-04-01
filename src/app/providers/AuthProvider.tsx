@@ -4,6 +4,6 @@ import { ReactNode } from "react";
 import { useInitAuth } from "@/hooks/useInitAuth";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  useInitAuth(); 
+  useInitAuth();
   return <>{children}</>;
 }

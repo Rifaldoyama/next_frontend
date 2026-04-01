@@ -1,38 +1,44 @@
-import { useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
-import { useEffect } from "react";
-
 
 export function useProfileGate() {
-  const { user, isComplete, initialized } = useAuthStore();
-  const pathname = usePathname();
-  const router = useRouter();
+  const { user, initialized, profileGateSeen, markProfileGateSeen } =
+    useAuthStore();
   const [open, setOpen] = useState(false);
+  const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
-    if (!initialized) return;
-
-    if (
-      user?.role === 'USER' &&
-      isComplete === false &&
-      pathname.startsWith('/dashboard')
-    ) {
-      setOpen(true);
-    } else {
+    // Jika auth belum siap, atau user sudah melihat modal di sesi ini, jangan munculkan
+    if (!initialized || !user || profileGateSeen) {
       setOpen(false);
+      return;
     }
-  }, [user, isComplete, pathname, initialized]);
+
+    const isRejected = user.detail?.verification_status === "REJECTED";
+    const needsAction = user.need_profile || isRejected;
+
+    // Hanya untuk role USER
+    if (user.role === "USER" && needsAction) {
+      setOpen(true);
+    }
+  }, [initialized, user, profileGateSeen]);
 
   const goComplete = () => {
+    markProfileGateSeen(); // Panggil ini agar di sessionStorage tersimpan 'true'
     setOpen(false);
-    router.push('/lengkapi-data');
+    setShowForm(true);
   };
 
   const goSkip = () => {
+    markProfileGateSeen(); // Panggil ini agar di sessionStorage tersimpan 'true'
     setOpen(false);
-    router.push('/dashboard/katalog');
   };
 
-  return { open, goComplete, goSkip };
+  return {
+    open,
+    showForm,
+    closeForm: () => setShowForm(false),
+    goComplete,
+    goSkip,
+  };
 }

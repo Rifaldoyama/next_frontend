@@ -2,27 +2,46 @@ export const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 export async function apiFetch(
   path: string,
-  options: RequestInit = {},
+  options: RequestInit & { isBlob?: boolean } = {},
 ) {
+  const { isBlob, ...fetchOptions } = options;
+
   const token =
-    typeof window !== 'undefined'
-      ? localStorage.getItem('token')
-      : null;
+    typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+  const headers: HeadersInit = {
+    ...(token && { Authorization: `Bearer ${token}` }),
+    ...(fetchOptions.body instanceof FormData
+      ? {}
+      : { "Content-Type": "application/json" }),
+    ...fetchOptions.headers,
+  };
 
   const res = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...options.headers,
-    },
+    ...fetchOptions,
+    headers,
   });
 
-  const data = await res.json();
-
   if (!res.ok) {
-    throw new Error(data.message || 'API Error');
+    let errorMessage = "API Error";
+
+    try {
+      const data = await res.json();
+      errorMessage = data.message || errorMessage;
+    } catch {
+      const text = await res.text();
+      if (text) errorMessage = text;
+    }
+
+    throw new Error(errorMessage);
   }
 
-  return data;
+  // 🔥 Kalau minta Blob
+  if (isBlob) {
+    return await res.blob();
+  }
+
+  // 🔥 Default JSON
+  const text = await res.text();
+  return text ? JSON.parse(text) : {};
 }

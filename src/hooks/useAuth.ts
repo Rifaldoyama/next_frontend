@@ -1,49 +1,94 @@
 "use client";
 
-import { login, register } from "@/lib/auth";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
+import { apiFetch } from "@/lib/api";
 
 export function useAuth(type: "login" | "register") {
-  const router = useRouter();
-  const setAuth = useAuthStore((s) => s.setAuth);
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const setAuth = useAuthStore((state) => state.setAuth);
+  function mapErrorMessage(err: any): string {
+    const msg =
+      err?.response?.data?.message || 
+      err?.data?.message || 
+      err?.message || 
+      "";
 
-  async function submit(data: any) {
+    if (msg === "Invalid credentials") {
+      return "Email atau password salah";
+    }
+
+    if (msg.toLowerCase().includes("email")) {
+      return "Email sudah terdaftar";
+    }
+
+    if (msg.toLowerCase().includes("username")) {
+      return "Username sudah digunakan";
+    }
+
+    return "Terjadi kesalahan, silakan coba lagi";
+  }
+
+  const submit = async (form: Record<string, string>) => {
+    setLoading(true);
+    setError(null);
+
     try {
-      setLoading(true);
-      setError(null);
+      const endpoint = type === "login" ? "/auth/login" : "/auth/register";
+      const res = await apiFetch(endpoint, {
+        method: "POST",
+        body: JSON.stringify(form),
+      });
 
-      const res = type === "login" ? await login(data) : await register(data);
-      if (!res?.user) throw new Error("Invalid auth response");
+      if (type === "register") {
+        router.push("/login?registered=true");
+        return;
+      }
 
-      localStorage.setItem("token", res.accessToken);
-      document.cookie = `token=${res.accessToken}; path=/; max-age=${60 * 60 * 24}`;
+      // 1. Ambil token dari response login
+      // Cek apakah backendmu pakai 'token' atau 'accessToken'
+      const token = res.token || res.accessToken;
 
-      setAuth(res.user, res.accessToken, res.isComplete);
+      if (!token) throw new Error("Token tidak ditemukan dalam response");
 
-      setTimeout(() => {
-        switch (res.user.role) {
-          case "ADMIN":
-            router.replace("/admin");
-            break;
-          case "PETUGAS":
-            router.replace("/petugas");
-            break;
-          case "USER":
-            router.replace("/dashboard");
-            break;
-        }
-      }, 0);
+      // 2. Simpan ke localStorage
+      localStorage.setItem("token", token);
+
+      // 3. Ambil data user LENGKAP.
+      // KUNCI: Kita masukkan headers secara manual di sini untuk memastikan
+      // request ini tidak "Unauthorized" karena nunggu state/localStorage
+      const userRes = await apiFetch("/users/me", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      // 4. Update Global State (Zustand)
+      setAuth(
+        {
+          ...userRes.user,
+          need_profile: userRes.need_profile,
+        },
+        token,
+      );
+
+      // 5. Redirect berdasarkan role
+      const role = userRes.user.role;
+      if (role === "ADMIN") router.replace("/admin");
+      else if (role === "PETUGAS") router.replace("/petugas");
+      else router.replace("/dashboard");
     } catch (err: any) {
-      setError(err.message || "Login gagal");
+      console.error("Auth Error:", err);
+
+      const mappedError = mapErrorMessage(err);
+      setError(mappedError);
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   return { submit, loading, error };
 }

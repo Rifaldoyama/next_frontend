@@ -1,7 +1,10 @@
-export function Input({
-  className = '',
-  ...props
-}: React.InputHTMLAttributes<HTMLInputElement>) {
+import React from 'react';
+
+type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
+  className?: string;
+};
+
+export function Input({ className = '', ...props }: InputProps) {
   return (
     <input
       {...props}
