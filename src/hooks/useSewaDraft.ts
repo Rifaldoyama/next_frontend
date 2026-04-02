@@ -11,6 +11,7 @@ interface DraftItem {
   jumlah: number;
   stok: number;
   harga?: number;
+  kategoriId?: string;
   source?: "ITEM" | "PAKET"; // 🔥 Tambahan optional (tidak merusak logic lama)
 }
 

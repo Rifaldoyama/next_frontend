@@ -1,33 +1,29 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useSewaDraft } from "@/hooks/useSewaDraft";
 import { useSewa } from "@/hooks/useSewa";
 import { useAuthStore } from "@/store/authStore";
-import { useRouter } from "next/navigation";
+import { Button } from "@/components/atoms/Buttons";
 
 export default function ReviewPage() {
   const draft = useSewaDraft();
-  // Error 'success' hilang karena useSewa sudah diperbaiki
   const { submitPeminjaman, loading, error, success } = useSewa();
-
-  // 1. Hapus 'isAuthenticated' dari destructuring store
   const { user, initialized, logout } = useAuthStore();
   const router = useRouter();
 
-  // 2. Buat variable isAuthenticated secara manual
   const isAuthenticated = !!user;
 
   // Check if user is authenticated
   useEffect(() => {
-    // Pastikan sudah initialized dulu baru cek user
     if (initialized && !isAuthenticated) {
       router.replace("/login");
     }
   }, [initialized, isAuthenticated, router]);
 
   const handleLogout = () => {
-    logout(); // Panggil fungsi logout dari destructuring
+    logout();
     router.replace("/login");
   };
 
@@ -43,32 +39,27 @@ export default function ReviewPage() {
         tanggal_selesai: draft.tanggal_selesai,
         metode_ambil: draft.metode_ambil,
         alamat_acara: draft.alamat_acara || "",
-
         jaminan_tipe: draft.jaminan_tipe!,
         jaminan_detail: draft.jaminan_detail,
-
         nama_rekening_pengembalian:
           draft.jaminan_tipe === "DEPOSIT_UANG"
             ? draft.nama_rekening_pengembalian
             : undefined,
-
         bank_pengembalian:
           draft.jaminan_tipe === "DEPOSIT_UANG"
             ? draft.bank_pengembalian
             : undefined,
-
         nomor_rekening_pengembalian:
           draft.jaminan_tipe === "DEPOSIT_UANG"
             ? draft.nomor_rekening_pengembalian
             : undefined,
       };
 
-      // 🔥 MODE PAKET
+      // Mode Paket
       if (draft.paketId) {
         payload.paketId = draft.paketId;
       }
-
-      // 🔥 MODE SATUAN
+      // Mode Satuan
       else {
         payload.items = draft.items.map((i) => ({
           barangId: i.barangId,
@@ -82,18 +73,30 @@ export default function ReviewPage() {
     }
   };
 
-  // Efek samping jika sukses (Opsional: pindahkan clear draft ke sini)
+  // Redirect after success
   useEffect(() => {
     if (success) {
       const timer = setTimeout(() => {
         draft.clear();
-        router.push("/riwayat"); // Redirect setelah sukses
+        router.push("/riwayat");
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [success]);
+  }, [success, draft, router]);
 
-  // Tampilan Loading Auth
+  const handleGoBack = () => {
+    // Kembali ke halaman sebelumnya
+    if (draft.paketId) {
+      router.back();
+    } else if (draft.items.length > 0 && draft.items[0]?.kategoriId) {
+      // Jika ada item, gunakan kategoriId dari item pertama
+      router.push(`/kategori/${draft.items[0].kategoriId}`);
+    } else {
+      router.push("/sewa");
+    }
+  };
+
+  // Loading Auth
   if (!initialized) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
@@ -104,7 +107,7 @@ export default function ReviewPage() {
     );
   }
 
-  // Jika sudah init tapi tidak ada user, return null (karena useEffect akan redirect)
+  // If not authenticated, return null (useEffect will redirect)
   if (!user) return null;
 
   return (
@@ -186,9 +189,7 @@ export default function ReviewPage() {
                   <p className="text-sm text-gray-600 mb-1">Tanggal Mulai</p>
                   <p className="font-medium text-gray-900">
                     {draft.tanggal_mulai
-                      ? new Date(draft.tanggal_mulai).toLocaleDateString(
-                          "id-ID",
-                        )
+                      ? new Date(draft.tanggal_mulai).toLocaleDateString("id-ID")
                       : "-"}
                   </p>
                 </div>
@@ -196,9 +197,7 @@ export default function ReviewPage() {
                   <p className="text-sm text-gray-600 mb-1">Tanggal Selesai</p>
                   <p className="font-medium text-gray-900">
                     {draft.tanggal_selesai
-                      ? new Date(draft.tanggal_selesai).toLocaleDateString(
-                          "id-ID",
-                        )
+                      ? new Date(draft.tanggal_selesai).toLocaleDateString("id-ID")
                       : "-"}
                   </p>
                 </div>
@@ -213,7 +212,11 @@ export default function ReviewPage() {
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="flex items-center">
                   <div
-                    className={`p-2 rounded-full mr-3 ${draft.metode_ambil === "DIANTAR" ? "bg-blue-100 text-blue-600" : "bg-green-100 text-green-600"}`}
+                    className={`p-2 rounded-full mr-3 ${
+                      draft.metode_ambil === "DIANTAR"
+                        ? "bg-blue-100 text-blue-600"
+                        : "bg-green-100 text-green-600"
+                    }`}
                   >
                     {draft.metode_ambil === "AMBIL_SENDIRI" ? (
                       <svg
@@ -292,12 +295,14 @@ export default function ReviewPage() {
                     <p className="text-gray-500">
                       Tidak ada barang yang dipilih
                     </p>
-                    <button
-                      onClick={() => router.push("/katagori")}
-                      className="mt-2 text-blue-600 hover:text-blue-700 text-sm font-medium"
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={handleGoBack}
+                      className="mt-2"
                     >
                       ← Kembali ke halaman sewa
-                    </button>
+                    </Button>
                   </div>
                 ) : (
                   draft.items.map((item) => (
@@ -355,7 +360,6 @@ export default function ReviewPage() {
 
                           <button
                             onClick={() => {
-                              // Tambahkan log untuk debug jika masih error
                               console.log(
                                 "Stok Item:",
                                 item.stok,
@@ -374,15 +378,12 @@ export default function ReviewPage() {
                               }
                               draft.addItem({ ...item, jumlah: 1 });
                             }}
-                            // Nonaktifkan tombol secara visual jika sudah penuh
                             disabled={
-                              item.stok !== undefined &&
-                              item.jumlah >= item.stok
+                              item.stok !== undefined && item.jumlah >= item.stok
                             }
                             className={`w-8 h-8 flex items-center justify-center rounded-md transition-colors ${
-                              item.stok !== undefined &&
-                              item.jumlah >= item.stok
-                                ? "bg-gray-100 text-gray-300 cursor-not-allowed" // Style saat mentok
+                              item.stok !== undefined && item.jumlah >= item.stok
+                                ? "bg-gray-100 text-gray-300 cursor-not-allowed"
                                 : "hover:bg-blue-50 text-gray-500 hover:text-blue-600"
                             }`}
                           >
@@ -431,18 +432,22 @@ export default function ReviewPage() {
             {/* Action Buttons */}
             <div className="pt-6 border-t border-gray-200">
               <div className="flex flex-col-reverse sm:flex-row gap-3">
-                <button
-                  onClick={() => router.push("/sewa")}
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  onClick={handleGoBack}
                   disabled={loading}
-                  className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1"
                 >
                   Kembali
-                </button>
+                </Button>
 
-                <button
+                <Button
+                  variant="primary"
+                  size="lg"
                   onClick={handleSubmit}
                   disabled={loading || draft.items.length === 0}
-                  className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  className="flex-1 flex items-center justify-center"
                 >
                   {loading ? (
                     <>
@@ -470,7 +475,7 @@ export default function ReviewPage() {
                   ) : (
                     "Konfirmasi & Kirim"
                   )}
-                </button>
+                </Button>
               </div>
             </div>
           </div>

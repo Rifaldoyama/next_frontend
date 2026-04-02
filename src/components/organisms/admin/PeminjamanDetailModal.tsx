@@ -191,7 +191,7 @@ export function PeminjamanDetailModal({
                 <span>Total Sewa (Multi-Hari)</span>
                 <span>
                   {formatRupiah(
-                    currentData.total_biaya - (currentData.biaya_tambahan || 0),
+                    currentData.total_biaya - (currentData.zona?.biaya || 0),
                   )}
                 </span>
               </div>
@@ -199,7 +199,7 @@ export function PeminjamanDetailModal({
               <div className="flex justify-between text-sm text-gray-600">
                 <span>Ongkir ({currentData.zona?.nama || "Belum Set"})</span>
                 <span className="text-blue-600">
-                  + {formatRupiah(currentData.biaya_tambahan || 0)}
+                  + {formatRupiah(currentData.zona?.biaya || 0)}
                 </span>
               </div>
 

@@ -293,7 +293,7 @@ export function TransactionPanel({ detail, onRefresh, onSuccess }: Props) {
   }
 
   const totalSewa = detail.total_sewa;
-  const ongkir = detail.biaya_tambahan || 0;
+  const ongkir = detail.zona?.biaya || 0;
   const depositAmount =
     detail.jaminan_tipe === "DEPOSIT_UANG" ? detail.deposit : 0;
 

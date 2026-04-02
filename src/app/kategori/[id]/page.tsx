@@ -313,7 +313,9 @@ export default function KategoriDetailPage() {
                           if (!isVerified)
                             return alert("Akun belum bisa menyewa");
 
-                          setSelectedItem(item);
+                          setSelectedItem({
+                            ...item,
+                          kategoriId: id,});
                           setShowFormModal(true);
                         }}
                         className="w-full bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white font-semibold py-2.5 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-[1.02] flex items-center justify-center gap-2"

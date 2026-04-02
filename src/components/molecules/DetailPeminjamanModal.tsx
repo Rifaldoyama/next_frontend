@@ -147,7 +147,7 @@ export function DetailPeminjamanModal({ id, open, onClose }: Props) {
 
                 <div className="flex justify-between">
                   <span>Biaya Pengiriman</span>
-                  <span>{formatRupiah(detail.biaya_tambahan || 0)}</span>
+                  <span>{formatRupiah(detail.zona?.biaya || 0)}</span>
                 </div>
 
                 {detail.jaminan_tipe === "DEPOSIT_UANG" && (
@@ -183,7 +183,7 @@ export function DetailPeminjamanModal({ id, open, onClose }: Props) {
                   <span>
                     {formatRupiah(
                       detail.total_sewa +
-                        (detail.biaya_tambahan || 0) +
+                        (detail.zona?.biaya || 0) +
                         (detail.deposit || 0),
                     )}
                   </span>
