@@ -61,8 +61,8 @@ export default function KelolaPaketPage() {
   const handleSubmit = async () => {
     if (!nama.trim()) return alert("Nama wajib diisi");
 
-    if (diskon < 0 || diskon > 100 || isNaN(diskon)) {
-      return alert("Diskon harus antara 0 - 100");
+    if (diskon < 0 || diskon > 50 || isNaN(diskon)) {
+      return alert("Diskon harus antara 0 - 50");
     }
 
     if (selectedItems.length === 0) {
@@ -73,7 +73,9 @@ export default function KelolaPaketPage() {
       const barangData = barang.find((b) => b.id === item.barangId);
 
       if (barangData && item.jumlah > barangData.stok_tersedia) {
-        alert(`Jumlah ${barangData.nama} melebihi stok (${barangData.stok_tersedia})`);
+        alert(
+          `Jumlah ${barangData.nama} melebihi stok (${barangData.stok_tersedia})`,
+        );
         return;
       }
     }
@@ -202,136 +204,196 @@ export default function KelolaPaketPage() {
       {/* ================= MODAL ================= */}
       <Modal open={openModal} onClose={handleClose}>
         <div className="bg-white p-6 rounded-xl w-full max-w-lg space-y-5 relative">
-
           <h2 className="text-xl font-bold">
             {editId ? "Edit Paket" : "Tambah Paket"}
           </h2>
 
-          {/* Nama */}
-          <input
-            type="text"
-            placeholder="Nama Paket"
-            value={nama}
-            onChange={(e) => setNama(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-          />
+          {/* Nama Paket */}
+          <div>
+            <label className="text-xs text-gray-500 uppercase tracking-wide font-semibold mb-1 block">
+              Nama Paket
+            </label>
+            <input
+              type="text"
+              placeholder="Masukkan nama paket"
+              value={nama}
+              onChange={(e) => setNama(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
 
           {/* Deskripsi */}
-          <textarea
-            placeholder="Deskripsi"
-            value={deskripsi}
-            onChange={(e) => setDeskripsi(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-          />
+          <div>
+            <label className="text-xs text-gray-500 uppercase tracking-wide font-semibold mb-1 block">
+              Deskripsi
+            </label>
+            <textarea
+              placeholder="Masukkan deskripsi paket"
+              value={deskripsi}
+              onChange={(e) => setDeskripsi(e.target.value)}
+              rows={3}
+              className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
 
           {/* Diskon */}
-          <input
-            type="number"
-            placeholder="Diskon (%)"
-            value={diskon}
-            onChange={(e) => setDiskon(Number(e.target.value))}
-            className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
-          />
+          <div>
+            <label className="text-xs text-gray-500 uppercase tracking-wide font-semibold mb-1 block">
+              Diskon (%)
+            </label>
+            <input
+              type="number"
+              placeholder="0 - 50"
+              value={diskon}
+              onChange={(e) => setDiskon(Number(e.target.value))}
+              min={0}
+              max={100}
+              className="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Masukkan diskon dalam persen (0-50%)
+            </p>
+          </div>
 
-          {/* Upload */}
-          <div className="space-y-3">
+          {/* Gambar Paket */}
+          <div>
+            <label className="text-xs text-gray-500 uppercase tracking-wide font-semibold mb-1 block">
+              Gambar Paket
+            </label>
             <input
               type="file"
               accept="image/*"
               onChange={(e) => setGambar(e.target.files?.[0] || null)}
               className="w-full border rounded-lg px-3 py-2"
             />
-
             {preview && (
-              <img
-                src={preview}
-                className="w-full h-40 object-cover rounded-lg border"
-              />
+              <div className="mt-3">
+                <img
+                  src={preview}
+                  alt="Preview gambar paket"
+                  className="w-full h-40 object-cover rounded-lg border"
+                />
+                <p className="text-xs text-gray-400 mt-1 text-center">
+                  Preview gambar
+                </p>
+              </div>
             )}
           </div>
 
-          {/* BARANG LIST */}
-          <div className="space-y-2 max-h-40 overflow-y-auto border p-3 rounded-lg">
-            {barang.map((b) => {
-              const selected = selectedItems.find((i) => i.barangId === b.id);
+          {/* Daftar Barang */}
+          <div>
+            <label className="text-xs text-gray-500 uppercase tracking-wide font-semibold mb-2 block">
+              Daftar Barang
+            </label>
+            <div className="space-y-2 max-h-48 overflow-y-auto border rounded-lg p-3 bg-gray-50">
+              {barang.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-4">
+                  Belum ada barang tersedia
+                </p>
+              ) : (
+                barang.map((b) => {
+                  const selected = selectedItems.find(
+                    (i) => i.barangId === b.id,
+                  );
+                  const isStockExceeded =
+                    selected && selected.jumlah > b.stok_tersedia;
 
-              return (
-                <div key={b.id} className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={!!selected}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedItems((prev) => {
-                          if (prev.some((i) => i.barangId === b.id))
-                            return prev;
-                          return [...prev, { barangId: b.id, jumlah: 0 }];
-                        });
-                      } else {
-                        setSelectedItems((prev) =>
-                          prev.filter((i) => i.barangId !== b.id),
-                        );
-                      }
-                    }}
-                  />
-
-                  <span className="flex-1 text-sm">{b.nama}</span>
-
-                  {selected && (
-                    <div className="flex items-center gap-2">
+                  return (
+                    <div
+                      key={b.id}
+                      className="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition"
+                    >
                       <input
-                        type="number"
-                        min={0}
-                        value={selected.jumlah}
-                        className={`w-20 border rounded px-2 py-1 text-sm text-center ${
-                          selected.jumlah > b.stok_tersedia ? "border-red-500" : ""
-                        }`}
-                        onInput={(e) => {
-                          const input = e.currentTarget;
-
-                          // jika ada leading zero seperti 03
-                          if (
-                            input.value.length > 1 &&
-                            input.value.startsWith("0")
-                          ) {
-                            input.value = input.value.replace(/^0+/, "");
+                        type="checkbox"
+                        checked={!!selected}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedItems((prev) => {
+                              if (prev.some((i) => i.barangId === b.id))
+                                return prev;
+                              return [...prev, { barangId: b.id, jumlah: 1 }];
+                            });
+                          } else {
+                            setSelectedItems((prev) =>
+                              prev.filter((i) => i.barangId !== b.id),
+                            );
                           }
-
-                          const jumlah = Math.max(0, Number(input.value || 0));
-
-                          setSelectedItems((prev) =>
-                            prev.map((i) =>
-                              i.barangId === b.id
-                                ? {
-                                    ...i,
-                                    jumlah,
-                                  }
-                                : i,
-                            ),
-                          );
                         }}
+                        className="w-4 h-4"
                       />
 
-                      {selected.jumlah > b.stok_tersedia && (
-                        <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">
-                          Stok hanya {b.stok_tersedia}
-                        </span>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-800">
+                          {b.nama}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Stok: {b.stok_tersedia} | Harga: Rp{" "}
+                          {b.harga_sewa?.toLocaleString()}
+                        </p>
+                      </div>
+
+                      {selected && (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min={1}
+                            max={b.stok_tersedia}
+                            value={selected.jumlah}
+                            className={`w-20 border rounded px-2 py-1 text-sm text-center ${
+                              isStockExceeded ? "border-red-500 bg-red-50" : ""
+                            }`}
+                            onChange={(e) => {
+                              let value = e.target.value;
+                              // Remove leading zeros
+                              if (value.length > 1 && value.startsWith("0")) {
+                                value = value.replace(/^0+/, "");
+                              }
+                              const jumlah = Math.min(
+                                b.stok_tersedia,
+                                Math.max(1, Number(value || 1)),
+                              );
+                              setSelectedItems((prev) =>
+                                prev.map((i) =>
+                                  i.barangId === b.id ? { ...i, jumlah } : i,
+                                ),
+                              );
+                            }}
+                          />
+                          {isStockExceeded && (
+                            <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded whitespace-nowrap">
+                              Maks {b.stok_tersedia}
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                  );
+                })
+              )}
+            </div>
+            {selectedItems.length > 0 && (
+              <p className="text-xs text-gray-500 mt-2">
+                {selectedItems.length} barang dipilih
+              </p>
+            )}
           </div>
 
-          {/* ACTION */}
-          <button
-            onClick={handleSubmit}
-            disabled={submitting}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg w-full transition disabled:opacity-50"
-          >
-            {submitting ? "Menyimpan..." : "Simpan"}
-          </button>
+          {/* Action Buttons */}
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition disabled:opacity-50"
+            >
+              {submitting ? "Menyimpan..." : "Simpan"}
+            </button>
+            <button
+              onClick={handleClose}
+              className="flex-1 border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition"
+            >
+              Batal
+            </button>
+          </div>
         </div>
       </Modal>
 

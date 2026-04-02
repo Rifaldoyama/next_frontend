@@ -163,7 +163,7 @@ export function RecentTransactions() {
 
       <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
         <Link
-          href="/admin/kel-pembayaran"
+          href="/admin/verifikasi-pembayaran"
           className="text-sm text-blue-600 hover:text-blue-700 font-medium"
         >
           View all transactions →

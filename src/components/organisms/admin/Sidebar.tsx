@@ -24,6 +24,17 @@ const navItems = [
     description: "Overview & statistics",
   },
   {
+    category: "Reports",
+    items: [
+      {
+        href: "/admin/riwayat-transaksi",
+        label: "Riwayat Transaksi",
+        icon: BookOpen,
+        description: "All transaction history",
+      },
+    ],
+  },
+  {
     category: "Inventory",
     items: [
       {
