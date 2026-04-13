@@ -4,7 +4,7 @@ import { apiFetch } from "@/lib/api";
 import { apiFetchForm } from "@/services/api-form";
 import { toast } from "react-hot-toast";
 
-// Enum yang sesuai dengan backend
+// Enum sesuai backend
 enum StatusPeminjaman {
   MENUNGGU_PERSETUJUAN = "MENUNGGU_PERSETUJUAN",
   SIAP_DIPROSES = "SIAP_DIPROSES",
@@ -49,9 +49,21 @@ interface Peminjaman {
     jumlah: number;
     harga_satuan: number;
   }>;
+  metode_ambil: string;
+  zona: {
+    nama: string;
+    biaya: number;
+  };
+  biayaDetails: Array<{
+    tipe: string;
+    jumlah: number;
+    label: string;
+  }>;
   total_biaya: number;
   sisa_tagihan: number;
 }
+
+const BASE_URL = "/api/petugas/peminjaman";
 
 export function usePetugasPeminjaman() {
   const [data, setData] = useState<Peminjaman[]>([]);
@@ -61,31 +73,12 @@ export function usePetugasPeminjaman() {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      // Coba beberapa kemungkinan endpoint
-      let response;
-      try {
-        // Kemungkinan 1: /petugas/peminjaman
-        response = await apiFetch("/petugas/peminjaman");
-      } catch (error1) {
-        console.log(
-          "Endpoint /petugas/peminjaman failed, trying /peminjaman/petugas",
-        );
-        try {
-          // Kemungkinan 2: /peminjaman/petugas
-          response = await apiFetch("/peminjaman/petugas");
-        } catch (error2) {
-          console.log(
-            "Endpoint /peminjaman/petugas failed, trying /api/petugas/peminjaman",
-          );
-          // Kemungkinan 3: dengan prefix /api
-          response = await apiFetch("/api/petugas/peminjaman");
-        }
-      }
+      const response = await apiFetch(BASE_URL);
       setData(response);
     } catch (error: any) {
-      console.error("Fetch data error:", error);
+      console.error(error);
       toast.error(error.message || "Gagal memuat data");
-      setData([]); // Set empty array on error
+      setData([]);
     } finally {
       setLoading(false);
     }
@@ -93,19 +86,8 @@ export function usePetugasPeminjaman() {
 
   const fetchDetail = useCallback(async (id: string) => {
     try {
-      let response;
-      try {
-        response = await apiFetch(`/petugas/peminjaman/${id}`);
-      } catch (error1) {
-        try {
-          response = await apiFetch(`/peminjaman/petugas/${id}`);
-        } catch (error2) {
-          response = await apiFetch(`/api/petugas/peminjaman/${id}`);
-        }
-      }
-      return response;
+      return await apiFetch(`${BASE_URL}/${id}`);
     } catch (error: any) {
-      console.error("Fetch detail error:", error);
       toast.error(error.message || "Gagal memuat detail");
       throw error;
     }
@@ -115,37 +97,36 @@ export function usePetugasPeminjaman() {
     async (id: string) => {
       setActionId(id);
       try {
-        let response;
-        try {
-          response = await apiFetch(
-            `/petugas/peminjaman/${id}/start-delivery`,
-            {
-              method: "POST",
-            },
-          );
-        } catch (error1) {
-          try {
-            response = await apiFetch(
-              `/peminjaman/petugas/${id}/start-delivery`,
-              {
-                method: "POST",
-              },
-            );
-          } catch (error2) {
-            response = await apiFetch(
-              `/api/petugas/peminjaman/${id}/start-delivery`,
-              {
-                method: "POST",
-              },
-            );
-          }
-        }
+        const res = await apiFetch(`${BASE_URL}/${id}/start`, {
+          method: "PATCH",
+        });
+
         toast.success("Pengantaran dimulai");
         await fetchData();
-        return response;
+        return res;
       } catch (error: any) {
-        console.error("Start delivery error:", error);
         toast.error(error.message || "Gagal memulai pengantaran");
+        throw error;
+      } finally {
+        setActionId(null);
+      }
+    },
+    [fetchData],
+  );
+
+  const confirmArrival = useCallback(
+    async (id: string) => {
+      setActionId(id);
+      try {
+        const res = await apiFetch(`${BASE_URL}/${id}/confirm-arrival`, {
+          method: "PATCH",
+        });
+
+        toast.success("Barang telah sampai di tujuan");
+        await fetchData();
+        return res;
+      } catch (error: any) {
+        toast.error(error.message || "Gagal konfirmasi kedatangan");
         throw error;
       } finally {
         setActionId(null);
@@ -160,23 +141,49 @@ export function usePetugasPeminjaman() {
       try {
         const formData = new FormData();
         formData.append("kondisi_barang_keluar", kondisi);
+
         if (file) {
           formData.append("foto_serah_terima", file);
         }
 
-        // Panggil API sesuai dengan endpoint yang ada
-        const response = await apiFetchForm(
-          `/petugas/peminjaman/${id}/handover`,
-          formData,
-        );
+        await apiFetchForm(`${BASE_URL}/${id}/handover`, formData, {
+          method: "PATCH",
+        });
 
         toast.success("Barang berhasil diserahkan");
         await fetchData();
         return true;
       } catch (error: any) {
-        console.error("Handover error:", error);
-        toast.error(error.message || "Gagal melakukan handover");
+        toast.error(error.message || "Gagal handover");
         return false;
+      } finally {
+        setActionId(null);
+      }
+    },
+    [fetchData],
+  );
+
+  const kembalikanJaminanFisik = useCallback(
+    async (id: string, catatan?: string, file?: File) => {
+      setActionId(id);
+      try {
+        const formData = new FormData();
+        formData.append("status", "DIKEMBALIKAN");
+        if (catatan) formData.append("catatan", catatan);
+        if (file) formData.append("foto_bukti", file);
+
+        const response = await apiFetchForm(
+          `${BASE_URL}/${id}/kembalikan-jaminan`,
+          formData,
+          { method: "PATCH" },
+        );
+
+        toast.success("Jaminan berhasil dikembalikan");
+        await fetchData();
+        return response;
+      } catch (error: any) {
+        toast.error(error.message || "Gagal mengembalikan jaminan");
+        throw error;
       } finally {
         setActionId(null);
       }
@@ -189,41 +196,36 @@ export function usePetugasPeminjaman() {
       id: string,
       items: Array<{ barangId: string; kondisi_kembali: KondisiBarang }>,
       file?: File,
+      tanggal_kembali?: string,
     ) => {
       setActionId(id);
       try {
         const formData = new FormData();
-        formData.append("items", JSON.stringify(items));
+        if (tanggal_kembali) {
+          formData.append("tanggal_kembali", tanggal_kembali);
+        }
+
+        items.forEach((item, index) => {
+          formData.append(`items[${index}][barangId]`, item.barangId);
+          formData.append(
+            `items[${index}][kondisi_kembali]`,
+            item.kondisi_kembali,
+          );
+        });
+
         if (file) {
           formData.append("foto_pengembalian", file);
         }
 
-        let response;
-        try {
-          response = await apiFetchForm(
-            `/petugas/peminjaman/${id}/return`,
-            formData,
-          );
-        } catch (error1) {
-          try {
-            response = await apiFetchForm(
-              `/peminjaman/petugas/${id}/return`,
-              formData,
-            );
-          } catch (error2) {
-            response = await apiFetchForm(
-              `/api/petugas/peminjaman/${id}/return`,
-              formData,
-            );
-          }
-        }
+        await apiFetchForm(`${BASE_URL}/${id}/return`, formData, {
+          method: "PATCH",
+        });
 
         toast.success("Pengembalian berhasil");
         await fetchData();
         return true;
       } catch (error: any) {
-        console.error("Return error:", error);
-        toast.error(error.message || "Gagal melakukan pengembalian");
+        toast.error(error.message || "Gagal return");
         return false;
       } finally {
         setActionId(null);
@@ -232,41 +234,25 @@ export function usePetugasPeminjaman() {
     [fetchData],
   );
 
+  // ✅ PRINT SURAT
   const printSurat = useCallback(async (id: string) => {
     try {
-      let blob;
-      try {
-        blob = await apiFetch(`/petugas/peminjaman/${id}/print-surat`, {
-          method: "GET",
-          isBlob: true,
-        });
-      } catch (error1) {
-        try {
-          blob = await apiFetch(`/peminjaman/petugas/${id}/print-surat`, {
-            method: "GET",
-            isBlob: true,
-          });
-        } catch (error2) {
-          blob = await apiFetch(`/api/petugas/peminjaman/${id}/print-surat`, {
-            method: "GET",
-            isBlob: true,
-          });
-        }
-      }
+      const blob = await apiFetch(`${BASE_URL}/${id}/surat`, {
+        method: "GET",
+        isBlob: true,
+      });
 
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `surat_serah_terima_${id}.pdf`);
-      document.body.appendChild(link);
+      link.download = `surat_serah_terima_${id}.pdf`;
       link.click();
-      link.remove();
+
       window.URL.revokeObjectURL(url);
 
       toast.success("Surat berhasil diunduh");
     } catch (error: any) {
-      console.error("Print error:", error);
-      toast.error(error.message || "Gagal mencetak surat");
+      toast.error(error.message || "Gagal download surat");
     }
   }, []);
 
@@ -277,8 +263,10 @@ export function usePetugasPeminjaman() {
     fetchData,
     fetchDetail,
     startDelivery,
+    confirmArrival,
     handover,
     returnBarang,
+    kembalikanJaminanFisik,
     printSurat,
   };
 }

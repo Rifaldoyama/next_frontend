@@ -282,7 +282,7 @@ export default function KategoriDetailPage() {
                             />
                           </svg>
                           <span className="font-medium text-gray-700">
-                            Stok: {item.stok_tersedia}
+                            Stok: {item.stok_tersedia - (item.stok_dipesan ?? 0)}
                           </span>
                         </div>
                       </div>

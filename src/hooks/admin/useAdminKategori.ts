@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { apiFetch } from '@/lib/api';
+import { useEffect, useState } from "react";
+import { apiFetch } from "@/lib/api";
 
 export function useAdminKategori() {
   const [kategori, setKategori] = useState<any[]>([]);
@@ -8,7 +8,7 @@ export function useAdminKategori() {
   const fetchKategori = async () => {
     setLoading(true);
     try {
-      const data = await apiFetch('/admin/kategori');
+      const data = await apiFetch("/admin/kategori");
       setKategori(data);
     } catch (error) {
       console.error("Gagal mengambil kategori", error);
@@ -19,46 +19,66 @@ export function useAdminKategori() {
 
   const toggleStatus = async (id: string, currentStatus: boolean) => {
     try {
-      const formData = new FormData();
-      // Kita kirim kebalikan dari status saat ini
-      formData.append('isActive', String(!currentStatus));
+      const newStatus = !currentStatus;
 
-      await apiFetch(`/admin/kategori/${id}`, {
-        method: 'PATCH',
-        body: formData,
+      const response = await apiFetch(`/admin/kategori/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ isActive: newStatus }),
       });
-      
-      await fetchKategori(); // Refresh data setelah berhasil
+
+      console.log("Toggle status response:", response);
+
+      await fetchKategori();
+
+      return response;
     } catch (error) {
       console.error("Gagal mengubah status", error);
       alert("Gagal mengubah status kategori");
+      throw error;
     }
   };
 
   const saveKategori = async (nama: string, file: File | null, id?: string) => {
     const formData = new FormData();
-    formData.append('nama', nama);
-    if (file) formData.append('file', file);
+    formData.append("nama", nama);
+    if (file) formData.append("file", file);
 
     const options = {
-      method: id ? 'PATCH' : 'POST',
+      method: id ? "PATCH" : "POST",
       body: formData,
     };
 
-    const url = id ? `/admin/kategori/${id}` : '/admin/kategori';
+    const url = id ? `/admin/kategori/${id}` : "/admin/kategori";
     const result = await apiFetch(url, options);
-    await fetchKategori(); 
+    await fetchKategori();
     return result;
   };
 
   const deleteKategori = async (id: string) => {
-    await apiFetch(`/admin/kategori/${id}`, { method: 'DELETE' });
-    await fetchKategori(); 
+    if (!confirm("Yakin ingin menghapus kategori ini?")) return;
+
+    try {
+      await apiFetch(`/admin/kategori/${id}`, { method: "DELETE" });
+      await fetchKategori();
+    } catch (error) {
+      console.error("Gagal menghapus kategori", error);
+      alert("Gagal menghapus kategori");
+    }
   };
 
   useEffect(() => {
     fetchKategori();
   }, []);
 
-  return { kategori, loading, saveKategori, deleteKategori,toggleStatus, refresh: fetchKategori };
+  return {
+    kategori,
+    loading,
+    saveKategori,
+    deleteKategori,
+    toggleStatus,
+    refresh: fetchKategori,
+  };
 }

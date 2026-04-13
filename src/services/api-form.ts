@@ -1,12 +1,15 @@
-export async function apiFetchForm(endpoint: string, formData: FormData) {
-  const token = localStorage.getItem("token"); // Ambil token auth
+export async function apiFetchForm(
+  endpoint: string,
+  formData: FormData,
+  options?: RequestInit,
+) {
+  const token = localStorage.getItem("token");
 
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${endpoint}`, {
-    method: "POST",
+    method: options?.method || "POST",
     headers: {
-      // PENTING: Jangan isi Content-Type. 
-      // Biarkan browser mengisinya otomatis dengan boundary.
       Authorization: token ? `Bearer ${token}` : "",
+      ...(options?.headers || {}),
     },
     body: formData,
   });

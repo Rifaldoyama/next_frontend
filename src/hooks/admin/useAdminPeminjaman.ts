@@ -2,13 +2,12 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
+import { BiayaDetail } from "../peminjaman/usePeminjamanData";
 
 // Sesuaikan Enum dengan Prisma
 export type StatusPeminjaman =
   | "MENUNGGU_PERSETUJUAN"
-  | "MENUNGGU_PEMBAYARAN"
-  | "MENUNGGU_VERIFIKASI"
-  | "DISETUJUI"
+  | "SIAP_DIPROSES" 
   | "DIPROSES"
   | "DIPAKAI"
   | "SELESAI"
@@ -79,6 +78,7 @@ export interface Peminjaman {
   deposit_dikembalikan: boolean;
   jaminan_tipe: "DEPOSIT_UANG" | "KTP" | "LAINNYA";
 
+
   // Relasi
   user: User;
   items: Item[];
@@ -89,6 +89,9 @@ export interface Peminjaman {
   approvedBy?: Actor | null;
   deliveredBy?: Actor | null;
   receivedBy?: Actor | null;
+
+  biayaDetails?: BiayaDetail[];
+   expired_at?: string;
 }
 
 export function useAdminPeminjaman() {

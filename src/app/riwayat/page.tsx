@@ -18,9 +18,6 @@ import {
   History,
 } from "lucide-react";
 
-// Base URL gambar (sesuaikan dengan config backend static filenya)
-// Jika gambar disimpan di public folder Nextjs, kosongkan saja.
-// Jika di NestJS serve static, arahkan ke URL backend.
 const IMAGE_BASE_URL =
   process.env.NEXT_PUBLIC_IMAGE_URL || "http://localhost:9000";
 
@@ -29,7 +26,6 @@ export default function HistoryPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
-
   const logout = useAuthStore((state) => state.logout);
 
   const handleLogout = () => {
@@ -96,6 +92,7 @@ export default function HistoryPage() {
           </div>
         )}
       </div>
+
       <DetailPeminjamanModal
         id={selectedId || ""}
         open={!!selectedId}
@@ -115,7 +112,6 @@ function HistoryCard({
   sewa: Peminjaman;
   onDetail: () => void;
 }) {
-  // Helper Warna Status
   const getStatusColor = (status: string) => {
     switch (status) {
       case "DIAJUKAN":
@@ -134,6 +130,8 @@ function HistoryCard({
     }
   };
 
+  const ongkirDetail = sewa.biayaDetails?.find((b) => b.tipe === "ONGKIR");
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "DIAJUKAN":
@@ -150,7 +148,6 @@ function HistoryCard({
     }
   };
 
-  // Format Tanggal
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("id-ID", {
       day: "numeric",
@@ -159,7 +156,6 @@ function HistoryCard({
     });
   };
 
-  // Format Rupiah
   const formatRupiah = (val: number) =>
     new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -190,7 +186,7 @@ function HistoryCard({
             <div>
               <p className="text-xs text-gray-500 font-medium">Zona</p>
               <p className="text-sm text-gray-700">
-                {sewa.zona?.nama ?? "Menunggu penentuan admin"}
+                {ongkirDetail?.label ?? "Belum ditentukan"}
               </p>
             </div>
           )}
@@ -302,7 +298,7 @@ function HistoryCard({
         <div>
           <p className="text-xs text-gray-500">Total Tagihan</p>
           <p className="text-xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
-            {formatRupiah(sewa.total_biaya + (sewa.deposit || 0))}
+            {formatRupiah(sewa.total_sewa + (sewa.deposit || 0))}
           </p>
         </div>
 
@@ -328,8 +324,8 @@ function HistorySkeleton() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-orange-50/30">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-8">
-          <div className="h-8 bg-gray-200 rounded w-48 mb-2 animate-pulse"></div>
-          <div className="h-4 bg-gray-200 rounded w-64 animate-pulse"></div>
+          <div className="h-8 bg-gray-200 rounded w-48 mb-2 animate-pulse" />
+          <div className="h-4 bg-gray-200 rounded w-64 animate-pulse" />
         </div>
 
         <div className="space-y-4">
@@ -339,16 +335,16 @@ function HistorySkeleton() {
               className="bg-white rounded-2xl p-6 border border-gray-100 animate-pulse"
             >
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
-                <div className="h-12 bg-gray-200 rounded"></div>
-                <div className="h-12 bg-gray-200 rounded"></div>
-                <div className="h-12 bg-gray-200 rounded"></div>
-                <div className="h-12 bg-gray-200 rounded"></div>
+                <div className="h-12 bg-gray-200 rounded" />
+                <div className="h-12 bg-gray-200 rounded" />
+                <div className="h-12 bg-gray-200 rounded" />
+                <div className="h-12 bg-gray-200 rounded" />
               </div>
               <div className="flex gap-4 mt-4">
-                <div className="w-14 h-14 bg-gray-200 rounded"></div>
+                <div className="w-14 h-14 bg-gray-200 rounded" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                  <div className="h-4 bg-gray-200 rounded w-3/4" />
+                  <div className="h-3 bg-gray-200 rounded w-1/2" />
                 </div>
               </div>
             </div>

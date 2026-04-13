@@ -1,3 +1,4 @@
+// src/components/organisms/SewaForm.tsx
 "use client";
 
 import { useState } from "react";
@@ -9,6 +10,7 @@ interface SewaFormProps {
     nama: string;
     stok_tersedia: number;
     harga_sewa: number;
+    kategoriId?: string;
   };
   kategoriId?: string;
   onClose: () => void;
@@ -36,39 +38,45 @@ export function SewaForm({ barang, onClose, onDone }: SewaFormProps) {
     tanggal_selesai,
     metode_ambil,
     alamat_acara,
+    jaminan_tipe: savedJaminanTipe,
+    jaminan_detail: savedJaminanDetail,
+    nama_rekening_pengembalian: savedNamaRek,
+    bank_pengembalian: savedBankRek,
+    nomor_rekening_pengembalian: savedNomorRek,
     setMeta,
     addItem,
   } = useSewaDraft();
 
-  // Cari apakah barang ini sudah ada di keranjang untuk menghitung sisa stok yang bisa ditambah
+  // Cek apakah sudah ada data (bukan item pertama)
+  const hasExistingData = items.length > 0 && tanggal_mulai && tanggal_selesai;
+  const isFirstItem = items.length === 0;
+
+  // Cari apakah barang ini sudah ada di keranjang
   const existingItem = items.find((i) => i.barangId === barang.id);
   const jumlahDiKeranjang = existingItem ? existingItem.jumlah : 0;
   const sisaStokTersedia = barang.stok_tersedia - jumlahDiKeranjang;
 
+  // State untuk jumlah (selalu dibutuhkan)
   const [jumlah, setJumlah] = useState<number>(1);
+  const [errors, setErrors] = useState<ValidationErrors>({});
+
+  // State untuk form lengkap (hanya digunakan jika item pertama)
   const [mulai, setMulai] = useState<string>(tanggal_mulai || "");
   const [selesai, setSelesai] = useState<string>(tanggal_selesai || "");
   const [metode, setMetode] = useState<MetodeAmbil>(
     metode_ambil || "AMBIL_SENDIRI",
   );
   const [alamat, setAlamat] = useState<string>(alamat_acara || "");
-  const [namaRek, setNamaRek] = useState("");
-  const [bankRek, setBankRek] = useState("");
-  const [nomorRek, setNomorRek] = useState("");
-
+  const [namaRek, setNamaRek] = useState(savedNamaRek || "");
+  const [bankRek, setBankRek] = useState(savedBankRek || "");
+  const [nomorRek, setNomorRek] = useState(savedNomorRek || "");
   const [jaminanTipe, setJaminanTipe] = useState<
     "DEPOSIT_UANG" | "KTP" | "SIM"
-  >("DEPOSIT_UANG");
+  >(savedJaminanTipe || "DEPOSIT_UANG");
+  const [jaminanDetail, setJaminanDetail] = useState(savedJaminanDetail || "");
 
-  const [jaminanDetail, setJaminanDetail] = useState("");
-
-  // State untuk error validation
-  const [errors, setErrors] = useState<ValidationErrors>({});
-
-  const isFirstItem = items.length === 0;
-
-  // Fungsi validasi
-  const validateForm = (): boolean => {
+  // Validasi untuk form lengkap
+  const validateFullForm = (): boolean => {
     const newErrors: ValidationErrors = {};
 
     // Validasi tanggal mulai
@@ -105,9 +113,15 @@ export function SewaForm({ barang, onClose, onDone }: SewaFormProps) {
     if (jaminanTipe !== "DEPOSIT_UANG") {
       if (!jaminanDetail || jaminanDetail.trim() === "") {
         newErrors.jaminanDetail = "Nomor identitas wajib diisi";
-      } else if (jaminanTipe === "KTP" && !/^[0-9]{16}$/.test(jaminanDetail.replace(/\s/g, ''))) {
+      } else if (
+        jaminanTipe === "KTP" &&
+        !/^[0-9]{16}$/.test(jaminanDetail.replace(/\s/g, ""))
+      ) {
         newErrors.jaminanDetail = "Nomor KTP harus 16 digit angka";
-      } else if (jaminanTipe === "SIM" && !/^[0-9]{12,16}$/.test(jaminanDetail.replace(/\s/g, ''))) {
+      } else if (
+        jaminanTipe === "SIM" &&
+        !/^[0-9]{12,16}$/.test(jaminanDetail.replace(/\s/g, ""))
+      ) {
         newErrors.jaminanDetail = "Nomor SIM harus 12-16 digit angka";
       }
     }
@@ -126,7 +140,7 @@ export function SewaForm({ barang, onClose, onDone }: SewaFormProps) {
 
       if (!nomorRek || nomorRek.trim() === "") {
         newErrors.nomorRek = "Nomor rekening wajib diisi";
-      } else if (!/^[0-9]{8,16}$/.test(nomorRek.replace(/\s/g, ''))) {
+      } else if (!/^[0-9]{8,16}$/.test(nomorRek.replace(/\s/g, ""))) {
         newErrors.nomorRek = "Nomor rekening harus 8-16 digit angka";
       }
     }
@@ -142,20 +156,29 @@ export function SewaForm({ barang, onClose, onDone }: SewaFormProps) {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle submit dengan validasi
-  const handleSubmit = () => {
-    // Jalankan validasi
-    if (!validateForm()) {
-      // Scroll ke error pertama
+  // Validasi untuk form ringkas (hanya jumlah)
+  const validateSimpleForm = (): boolean => {
+    const newErrors: ValidationErrors = {};
+
+    if (jumlah <= 0) {
+      newErrors.jumlah = "Jumlah harus lebih dari 0";
+    } else if (jumlah > sisaStokTersedia) {
+      newErrors.jumlah = `Jumlah melebihi stok tersedia. Maksimal: ${sisaStokTersedia}`;
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Handle submit untuk form lengkap
+  const handleFullSubmit = () => {
+    if (!validateFullForm()) {
       const firstError = document.querySelector(".error-message");
       if (firstError) {
         firstError.scrollIntoView({ behavior: "smooth", block: "center" });
       }
       return;
     }
-
-    console.log("SUBMIT CLICKED");
-    console.log("ITEM BEFORE ADD:", barang);
 
     // Simpan Metadata
     setMeta({
@@ -179,20 +202,207 @@ export function SewaForm({ barang, onClose, onDone }: SewaFormProps) {
       nama: barang.nama,
       stok: barang.stok_tersedia,
       jumlah,
-      kategoriId: barang.kategoriId ,
+      kategoriId: barang.kategoriId,
       source: "ITEM",
     });
 
     requestAnimationFrame(() => onDone());
   };
 
-  // Helper untuk menghapus error saat input berubah
+  // Handle submit untuk form ringkas
+  const handleSimpleSubmit = () => {
+    if (!validateSimpleForm()) {
+      const firstError = document.querySelector(".error-message");
+      if (firstError) {
+        firstError.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      return;
+    }
+
+    // Tambahkan ke keranjang (metadata sudah ada dari sebelumnya)
+    addItem({
+      barangId: barang.id,
+      nama: barang.nama,
+      stok: barang.stok_tersedia,
+      jumlah,
+      kategoriId: barang.kategoriId,
+      source: "ITEM",
+    });
+
+    requestAnimationFrame(() => onDone());
+  };
+
   const clearError = (field: keyof ValidationErrors) => {
     if (errors[field]) {
       setErrors({ ...errors, [field]: undefined });
     }
   };
 
+  // Jika sudah ada data (bukan item pertama), tampilkan form ringkas
+  if (hasExistingData) {
+    return (
+      <div className="space-y-5 p-4 sm:p-2 text-black">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 pb-3 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <div className="w-1 h-6 bg-gradient-to-b from-orange-500 to-pink-500 rounded-full" />
+            <h2 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
+              Tambah {barang.nama}
+            </h2>
+          </div>
+          <div className="flex gap-2">
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 bg-green-50 rounded-full text-green-700 border border-green-100">
+              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fillRule="evenodd"
+                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              Data tersimpan
+            </span>
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 bg-gradient-to-r from-orange-50 to-pink-50 rounded-full text-orange-700 border border-orange-100">
+              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              </svg>
+              Stok: {barang.stok_tersedia}
+            </span>
+          </div>
+        </div>
+
+        {/* Informasi data yang sudah tersimpan */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
+          <h3 className="text-sm font-semibold text-blue-800 mb-2 flex items-center gap-2">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path
+                fillRule="evenodd"
+                d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                clipRule="evenodd"
+              />
+            </svg>
+            Informasi Sewa yang Tersimpan
+          </h3>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div>
+              <p className="text-gray-500 text-xs">Tanggal Sewa</p>
+              <p className="font-medium">
+                {tanggal_mulai} - {tanggal_selesai}
+              </p>
+            </div>
+            <div>
+              <p className="text-gray-500 text-xs">Metode</p>
+              <p className="font-medium">
+                {metode_ambil === "AMBIL_SENDIRI" ? "Ambil Sendiri" : "Diantar"}
+              </p>
+            </div>
+            <div>
+              <p className="text-gray-500 text-xs">Jaminan</p>
+              <p className="font-medium">
+                {savedJaminanTipe === "DEPOSIT_UANG"
+                  ? "Deposit Uang"
+                  : savedJaminanTipe}
+              </p>
+            </div>
+            <div>
+              <p className="text-gray-500 text-xs">Total Item di Keranjang</p>
+              <p className="font-medium">{items.length} item</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Input Jumlah Barang */}
+        <div>
+          <label
+            htmlFor="jumlah_barang"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
+            Jumlah Barang <span className="text-red-500">*</span>
+            {jumlahDiKeranjang > 0 && (
+              <span className="text-orange-600 ml-1 text-xs">
+                (Sudah ada {jumlahDiKeranjang} di keranjang)
+              </span>
+            )}
+          </label>
+          <input
+            id="jumlah_barang"
+            type="number"
+            min={1}
+            max={sisaStokTersedia}
+            value={jumlah}
+            onChange={(e) => {
+              const val = parseInt(e.target.value);
+              if (val > sisaStokTersedia) {
+                setJumlah(sisaStokTersedia);
+              } else if (isNaN(val) || val < 1) {
+                setJumlah(1);
+              } else {
+                setJumlah(val);
+              }
+              clearError("jumlah");
+            }}
+            className={`w-full px-4 py-2.5 border rounded-lg shadow-sm outline-none transition-all focus:ring-2 ${
+              errors.jumlah
+                ? "border-red-500 focus:ring-red-500"
+                : "border-gray-200 focus:ring-orange-500 focus:border-transparent"
+            }`}
+          />
+          {errors.jumlah ? (
+            <p className="text-xs text-red-500 mt-2 flex items-center gap-1 error-message">
+              <span>⚠️</span>
+              {errors.jumlah}
+            </p>
+          ) : sisaStokTersedia <= 0 ? (
+            <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
+              <span>⚠️</span>
+              Stok di keranjang sudah maksimal.
+            </p>
+          ) : (
+            <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              Sisa yang bisa ditambah: {sisaStokTersedia}
+            </p>
+          )}
+        </div>
+
+        {/* Summary Info */}
+        <div className="bg-gradient-to-r from-orange-50 to-pink-50 rounded-xl p-3 border border-orange-100">
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-gray-600">Total yang akan ditambahkan:</span>
+            <span className="font-bold text-orange-600">{jumlah} item</span>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-3 pt-4">
+          <button
+            onClick={handleSimpleSubmit}
+            disabled={sisaStokTersedia <= 0}
+            className={`flex-1 font-semibold px-4 py-2.5 rounded-lg transition-all duration-200 transform hover:scale-[1.02] ${
+              sisaStokTersedia <= 0
+                ? "bg-gray-200 cursor-not-allowed text-gray-500"
+                : "bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white shadow-md hover:shadow-lg"
+            }`}
+          >
+            Tambah ke Keranjang
+          </button>
+          <button
+            onClick={onClose}
+            className="flex-1 bg-white border border-gray-200 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-50 hover:border-orange-200 transition-all duration-200"
+          >
+            Batal
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Jika belum ada data (item pertama), tampilkan form lengkap
   return (
     <div className="space-y-5 p-4 sm:p-2 text-black">
       {/* Header */}
@@ -227,7 +437,10 @@ export function SewaForm({ barang, onClose, onDone }: SewaFormProps) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
             <div>
-              <label htmlFor="tanggal_mulai" className="block text-xs font-medium text-gray-600 mb-1">
+              <label
+                htmlFor="tanggal_mulai"
+                className="block text-xs font-medium text-gray-600 mb-1"
+              >
                 Mulai <span className="text-red-500">*</span>
               </label>
               <input
@@ -238,17 +451,19 @@ export function SewaForm({ barang, onClose, onDone }: SewaFormProps) {
                   setMulai(e.target.value);
                   clearError("mulai");
                 }}
-                title="Tanggal mulai sewa"
-                placeholder="Pilih tanggal mulai"
-                className={`w-full text-sm p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white ${errors.mulai ? "border-red-500" : "border-gray-200"
-                  }`}
+                className={`w-full text-sm p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white ${errors.mulai ? "border-red-500" : "border-gray-200"}`}
               />
               {errors.mulai && (
-                <p className="text-xs text-red-500 mt-1 error-message">{errors.mulai}</p>
+                <p className="text-xs text-red-500 mt-1 error-message">
+                  {errors.mulai}
+                </p>
               )}
             </div>
             <div>
-              <label htmlFor="tanggal_selesai" className="block text-xs font-medium text-gray-600 mb-1">
+              <label
+                htmlFor="tanggal_selesai"
+                className="block text-xs font-medium text-gray-600 mb-1"
+              >
                 Selesai <span className="text-red-500">*</span>
               </label>
               <input
@@ -259,19 +474,21 @@ export function SewaForm({ barang, onClose, onDone }: SewaFormProps) {
                   setSelesai(e.target.value);
                   clearError("selesai");
                 }}
-                title="Tanggal selesai sewa"
-                placeholder="Pilih tanggal selesai"
-                className={`w-full text-sm p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white ${errors.selesai ? "border-red-500" : "border-gray-200"
-                  }`}
+                className={`w-full text-sm p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white ${errors.selesai ? "border-red-500" : "border-gray-200"}`}
               />
               {errors.selesai && (
-                <p className="text-xs text-red-500 mt-1 error-message">{errors.selesai}</p>
+                <p className="text-xs text-red-500 mt-1 error-message">
+                  {errors.selesai}
+                </p>
               )}
             </div>
           </div>
 
           <div className="mb-3">
-            <label htmlFor="jaminan_tipe" className="block text-xs font-medium text-gray-600 mb-1">
+            <label
+              htmlFor="jaminan_tipe"
+              className="block text-xs font-medium text-gray-600 mb-1"
+            >
               Jaminan <span className="text-red-500">*</span>
             </label>
             <select
@@ -284,7 +501,6 @@ export function SewaForm({ barang, onClose, onDone }: SewaFormProps) {
                 clearError("bankRek");
                 clearError("nomorRek");
               }}
-              title="Pilih jenis jaminan"
               className="w-full text-sm p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
             >
               <option value="DEPOSIT_UANG">Deposit Uang</option>
@@ -295,11 +511,7 @@ export function SewaForm({ barang, onClose, onDone }: SewaFormProps) {
 
           {jaminanTipe !== "DEPOSIT_UANG" && (
             <div className="mb-3">
-              <label htmlFor="jaminan_detail" className="sr-only">
-                Nomor {jaminanTipe}
-              </label>
               <input
-                id="jaminan_detail"
                 type="text"
                 placeholder={`Masukkan nomor ${jaminanTipe}...`}
                 value={jaminanDetail}
@@ -307,86 +519,71 @@ export function SewaForm({ barang, onClose, onDone }: SewaFormProps) {
                   setJaminanDetail(e.target.value);
                   clearError("jaminanDetail");
                 }}
-                title={`Nomor ${jaminanTipe}`}
-                className={`w-full text-sm p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white ${errors.jaminanDetail ? "border-red-500" : "border-gray-200"
-                  }`}
+                className={`w-full text-sm p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white ${errors.jaminanDetail ? "border-red-500" : "border-gray-200"}`}
               />
               {errors.jaminanDetail && (
-                <p className="text-xs text-red-500 mt-1 error-message">{errors.jaminanDetail}</p>
+                <p className="text-xs text-red-500 mt-1 error-message">
+                  {errors.jaminanDetail}
+                </p>
               )}
             </div>
           )}
 
           {jaminanTipe === "DEPOSIT_UANG" && (
             <div className="space-y-2 mb-3">
-              <div>
-                <label htmlFor="nama_rekening" className="sr-only">
-                  Nama Pemilik Rekening
-                </label>
-                <input
-                  id="nama_rekening"
-                  type="text"
-                  placeholder="Nama Pemilik Rekening"
-                  value={namaRek}
-                  onChange={(e) => {
-                    setNamaRek(e.target.value);
-                    clearError("namaRek");
-                  }}
-                  title="Nama pemilik rekening"
-                  className={`w-full text-sm p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white ${errors.namaRek ? "border-red-500" : "border-gray-200"
-                    }`}
-                />
-                {errors.namaRek && (
-                  <p className="text-xs text-red-500 mt-1 error-message">{errors.namaRek}</p>
-                )}
-              </div>
-              <div>
-                <label htmlFor="bank_rekening" className="sr-only">
-                  Nama Bank
-                </label>
-                <input
-                  id="bank_rekening"
-                  type="text"
-                  placeholder="Nama Bank"
-                  value={bankRek}
-                  onChange={(e) => {
-                    setBankRek(e.target.value);
-                    clearError("bankRek");
-                  }}
-                  title="Nama bank"
-                  className={`w-full text-sm p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white ${errors.bankRek ? "border-red-500" : "border-gray-200"
-                    }`}
-                />
-                {errors.bankRek && (
-                  <p className="text-xs text-red-500 mt-1 error-message">{errors.bankRek}</p>
-                )}
-              </div>
-              <div>
-                <label htmlFor="nomor_rekening" className="sr-only">
-                  Nomor Rekening
-                </label>
-                <input
-                  id="nomor_rekening"
-                  type="text"
-                  placeholder="Nomor Rekening"
-                  value={nomorRek}
-                  onChange={(e) => {
-                    setNomorRek(e.target.value);
-                    clearError("nomorRek");
-                  }}
-                  title="Nomor rekening"
-                  className={`w-full text-sm p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white ${errors.nomorRek ? "border-red-500" : "border-gray-200"
-                    }`}
-                />
-                {errors.nomorRek && (
-                  <p className="text-xs text-red-500 mt-1 error-message">{errors.nomorRek}</p>
-                )}
-              </div>
+              <input
+                type="text"
+                placeholder="Nama Pemilik Rekening"
+                value={namaRek}
+                onChange={(e) => {
+                  setNamaRek(e.target.value);
+                  clearError("namaRek");
+                }}
+                className={`w-full text-sm p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white ${errors.namaRek ? "border-red-500" : "border-gray-200"}`}
+              />
+              {errors.namaRek && (
+                <p className="text-xs text-red-500 mt-1 error-message">
+                  {errors.namaRek}
+                </p>
+              )}
+              <input
+                type="text"
+                placeholder="Nama Bank"
+                value={bankRek}
+                onChange={(e) => {
+                  setBankRek(e.target.value);
+                  clearError("bankRek");
+                }}
+                className={`w-full text-sm p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white ${errors.bankRek ? "border-red-500" : "border-gray-200"}`}
+              />
+              {errors.bankRek && (
+                <p className="text-xs text-red-500 mt-1 error-message">
+                  {errors.bankRek}
+                </p>
+              )}
+              <input
+                type="text"
+                placeholder="Nomor Rekening"
+                value={nomorRek}
+                onChange={(e) => {
+                  setNomorRek(e.target.value);
+                  clearError("nomorRek");
+                }}
+                className={`w-full text-sm p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white ${errors.nomorRek ? "border-red-500" : "border-gray-200"}`}
+              />
+              {errors.nomorRek && (
+                <p className="text-xs text-red-500 mt-1 error-message">
+                  {errors.nomorRek}
+                </p>
+              )}
             </div>
           )}
 
           <div className="mb-3">
-            <label htmlFor="metode_ambil" className="block text-xs font-medium text-gray-600 mb-1">
+            <label
+              htmlFor="metode_ambil"
+              className="block text-xs font-medium text-gray-600 mb-1"
+            >
               Metode <span className="text-red-500">*</span>
             </label>
             <select
@@ -396,7 +593,6 @@ export function SewaForm({ barang, onClose, onDone }: SewaFormProps) {
                 setMetode(e.target.value as any);
                 clearError("alamat");
               }}
-              title="Pilih metode pengambilan"
               className="w-full text-sm p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
             >
               <option value="AMBIL_SENDIRI">Ambil Sendiri</option>
@@ -406,11 +602,7 @@ export function SewaForm({ barang, onClose, onDone }: SewaFormProps) {
 
           {metode === "DIANTAR" && (
             <div>
-              <label htmlFor="alamat_acara" className="sr-only">
-                Alamat Lengkap
-              </label>
               <input
-                id="alamat_acara"
                 type="text"
                 placeholder="Alamat lengkap..."
                 value={alamat}
@@ -418,12 +610,12 @@ export function SewaForm({ barang, onClose, onDone }: SewaFormProps) {
                   setAlamat(e.target.value);
                   clearError("alamat");
                 }}
-                title="Alamat lengkap untuk pengantaran"
-                className={`w-full text-sm p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white ${errors.alamat ? "border-red-500" : "border-gray-200"
-                  }`}
+                className={`w-full text-sm p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white ${errors.alamat ? "border-red-500" : "border-gray-200"}`}
               />
               {errors.alamat && (
-                <p className="text-xs text-red-500 mt-1 error-message">{errors.alamat}</p>
+                <p className="text-xs text-red-500 mt-1 error-message">
+                  {errors.alamat}
+                </p>
               )}
             </div>
           )}
@@ -431,7 +623,10 @@ export function SewaForm({ barang, onClose, onDone }: SewaFormProps) {
 
         {/* Input Jumlah Barang */}
         <div>
-          <label htmlFor="jumlah_barang" className="block text-sm font-medium text-gray-700 mb-2">
+          <label
+            htmlFor="jumlah_barang_full"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
             Jumlah Barang <span className="text-red-500">*</span>
             {jumlahDiKeranjang > 0 && (
               <span className="text-orange-600 ml-1 text-xs">
@@ -440,7 +635,7 @@ export function SewaForm({ barang, onClose, onDone }: SewaFormProps) {
             )}
           </label>
           <input
-            id="jumlah_barang"
+            id="jumlah_barang_full"
             type="number"
             min={1}
             max={sisaStokTersedia}
@@ -456,24 +651,12 @@ export function SewaForm({ barang, onClose, onDone }: SewaFormProps) {
               }
               clearError("jumlah");
             }}
-            title="Jumlah barang yang akan disewa"
-            placeholder="Masukkan jumlah barang"
-            className={`w-full px-4 py-2.5 border rounded-lg shadow-sm outline-none transition-all focus:ring-2 ${errors.jumlah
-                ? "border-red-500 focus:ring-red-500"
-                : jumlah > sisaStokTersedia
-                  ? "border-red-500 focus:ring-red-500"
-                  : "border-gray-200 focus:ring-orange-500 focus:border-transparent"
-              }`}
+            className={`w-full px-4 py-2.5 border rounded-lg shadow-sm outline-none transition-all focus:ring-2 ${errors.jumlah ? "border-red-500 focus:ring-red-500" : "border-gray-200 focus:ring-orange-500 focus:border-transparent"}`}
           />
           {errors.jumlah ? (
             <p className="text-xs text-red-500 mt-2 flex items-center gap-1 error-message">
               <span>⚠️</span>
               {errors.jumlah}
-            </p>
-          ) : sisaStokTersedia <= 0 ? (
-            <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
-              <span>⚠️</span>
-              Stok di keranjang sudah maksimal.
             </p>
           ) : (
             <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
@@ -501,14 +684,15 @@ export function SewaForm({ barang, onClose, onDone }: SewaFormProps) {
       {/* Action Buttons */}
       <div className="flex flex-col sm:flex-row gap-3 pt-4">
         <button
-          onClick={handleSubmit}
+          onClick={handleFullSubmit}
           disabled={sisaStokTersedia <= 0}
-          className={`flex-1 font-semibold px-4 py-2.5 rounded-lg transition-all duration-200 transform hover:scale-[1.02] ${sisaStokTersedia <= 0
+          className={`flex-1 font-semibold px-4 py-2.5 rounded-lg transition-all duration-200 transform hover:scale-[1.02] ${
+            sisaStokTersedia <= 0
               ? "bg-gray-200 cursor-not-allowed text-gray-500"
               : "bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white shadow-md hover:shadow-lg"
-            }`}
+          }`}
         >
-          {isFirstItem ? "Mulai Sewa" : "Tambah ke Keranjang"}
+          Mulai Sewa
         </button>
         <button
           onClick={onClose}

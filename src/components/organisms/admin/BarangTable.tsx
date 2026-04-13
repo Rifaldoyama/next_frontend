@@ -8,7 +8,7 @@ export function BarangTable({
   onEdit,
 }: {
   data: any[];
-  onDelete: (id: string) => void;
+  onDelete: (id: string, name: string) => void;
   onEdit: (item: any) => void;
 }) {
   return (
@@ -157,7 +157,7 @@ export function BarangTable({
                       </Button>
 
                       <Button
-                        onClick={() => onDelete(item.id)}
+                      onClick={() => onDelete(item.id, item.nama)}
                         className="flex items-center space-x-2 bg-gradient-to-r from-red-600 to-red-700 px-4 py-2 text-sm font-medium text-white transition-all hover:from-red-700 hover:to-red-800 hover:shadow-md"
                       >
                         <svg

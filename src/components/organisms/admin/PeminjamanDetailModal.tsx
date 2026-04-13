@@ -39,7 +39,6 @@ export function PeminjamanDetailModal({
 
   if (!open || !currentData) return null;
 
-
   async function handleAssign() {
     if (!currentData || !selectedZona) return;
     setIsSubmitting(true);
@@ -58,6 +57,12 @@ export function PeminjamanDetailModal({
     setSelected(null);
     onClose();
   };
+
+  const ongkirDetail = currentData.biayaDetails?.find(
+    (b: any) => b.tipe === "ONGKIR",
+  );
+
+  const ongkir = ongkirDetail?.jumlah || 0;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
@@ -125,7 +130,8 @@ export function PeminjamanDetailModal({
                   value={selectedZona}
                   onChange={(e) => setSelectedZona(e.target.value)}
                   disabled={
-                    currentData.status_pinjam !== "MENUNGGU_PERSETUJUAN" || isSubmitting
+                    currentData.status_pinjam !== "MENUNGGU_PERSETUJUAN" ||
+                    isSubmitting
                   }
                 >
                   <option value="">-- Pilih Zona Pengiriman --</option>
@@ -189,23 +195,21 @@ export function PeminjamanDetailModal({
             <div className="w-full sm:w-1/2 space-y-2 border-t pt-4">
               <div className="flex justify-between text-sm text-gray-600">
                 <span>Total Sewa (Multi-Hari)</span>
-                <span>
-                  {formatRupiah(
-                    currentData.total_biaya - (currentData.zona?.biaya || 0),
-                  )}
-                </span>
+                <span>{formatRupiah(currentData.total_biaya - ongkir)}</span>
               </div>
 
               <div className="flex justify-between text-sm text-gray-600">
-                <span>Ongkir ({currentData.zona?.nama || "Belum Set"})</span>
-                <span className="text-blue-600">
-                  + {formatRupiah(currentData.zona?.biaya || 0)}
-                </span>
+                <span>Ongkir ({ongkirDetail?.label || "Belum Set"})</span>
+                <span className="text-blue-600">+ {formatRupiah(ongkir)}</span>
               </div>
 
               <div className="flex justify-between font-bold text-lg border-b pb-2">
                 <span>Total Semua</span>
-                <span>{formatRupiah(currentData.total_biaya + (currentData.deposit || 0))}</span>
+                <span>
+                  {formatRupiah(
+                    currentData.total_biaya + (currentData.deposit || 0),
+                  )}
+                </span>
               </div>
 
               <div className="bg-yellow-50 p-3 rounded-md border border-yellow-200">

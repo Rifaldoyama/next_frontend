@@ -6,6 +6,7 @@ export interface CatalogItem {
   deskripsi: string;
   harga_sewa: number;
   stok_tersedia: number;
+  stok_dipesan?: number;
   gambar?: string;
   kategori: {
     nama: string;

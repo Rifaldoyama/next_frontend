@@ -1,6 +1,15 @@
 "use client";
 
-import { User, Mail, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  User,
+  Mail,
+  ShieldCheck,
+  Sparkles,
+  Phone,
+  MapPin,
+  CreditCard,
+  IdCard,
+} from "lucide-react";
 
 export function ProfileInfo({ user }: { user: any }) {
   const detail = user.detail;
@@ -23,7 +32,16 @@ export function ProfileInfo({ user }: { user: any }) {
 
   const userData = [
     { label: "Nama Lengkap", value: detail.nama_lengkap || "-", icon: User },
+    { label: "Username", value: user.username || "-", icon: User },
     { label: "Email", value: user.email || "-", icon: Mail },
+    { label: "Nomor HP", value: detail.no_hp || "-", icon: Phone },
+    {
+      label: "Alamat",
+      value: detail.alamat || "-",
+      icon: MapPin,
+      multiline: true,
+    },
+    { label: "Nomor KTP", value: detail.no_ktp || "-", icon: IdCard },
     {
       label: "Status Verifikasi",
       value: detail.verification_status,
@@ -31,6 +49,19 @@ export function ProfileInfo({ user }: { user: any }) {
       icon: ShieldCheck,
     },
   ];
+
+  // Data rekening (opsional, bisa ditampilkan jika ada)
+  const rekeningData = user.rekening
+    ? [
+        { label: "Nama Rekening", value: user.rekening.nama, icon: CreditCard },
+        { label: "Bank", value: user.rekening.bank, icon: CreditCard },
+        {
+          label: "Nomor Rekening",
+          value: user.rekening.nomor,
+          icon: CreditCard,
+        },
+      ]
+    : [];
 
   return (
     <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
@@ -59,10 +90,10 @@ export function ProfileInfo({ user }: { user: any }) {
             return (
               <div
                 key={index}
-                className="flex flex-col sm:flex-row sm:items-center py-2"
+                className="flex flex-col sm:flex-row sm:items-start py-2 border-b border-gray-50 last:border-0"
               >
-                <div className="flex items-center gap-2 sm:w-1/3 mb-1 sm:mb-0">
-                  <Icon className="w-4 h-4 text-orange-400" />
+                <div className="flex items-center gap-2 sm:w-1/3 mb-2 sm:mb-0">
+                  <Icon className="w-4 h-4 text-orange-400 flex-shrink-0" />
                   <span className="text-sm font-medium text-gray-600">
                     {item.label}
                   </span>
@@ -70,14 +101,55 @@ export function ProfileInfo({ user }: { user: any }) {
                 <div className="sm:w-2/3">
                   {item.isStatus ? (
                     renderVerificationStatus(item.value)
+                  ) : item.multiline ? (
+                    <p className="text-gray-800 whitespace-pre-wrap break-words">
+                      {item.value}
+                    </p>
                   ) : (
-                    <span className="text-gray-800">{item.value}</span>
+                    <span className="text-gray-800 break-words">
+                      {item.value}
+                    </span>
                   )}
                 </div>
               </div>
             );
           })}
         </div>
+
+        {/* Rekening Section (jika ada) */}
+        {rekeningData.length > 0 && (
+          <>
+            <div className="mt-6 pt-4 border-t border-gray-200">
+              <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                <CreditCard className="w-4 h-4 text-orange-400" />
+                Informasi Rekening
+              </h4>
+              <div className="space-y-3">
+                {rekeningData.map((item, index) => {
+                  const Icon = item.icon;
+                  return (
+                    <div
+                      key={index}
+                      className="flex flex-col sm:flex-row sm:items-center"
+                    >
+                      <div className="flex items-center gap-2 sm:w-1/3 mb-1 sm:mb-0">
+                        <Icon className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm text-gray-500">
+                          {item.label}
+                        </span>
+                      </div>
+                      <div className="sm:w-2/3">
+                        <span className="text-gray-700">
+                          {item.value || "-"}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Footer */}
@@ -105,14 +177,14 @@ function renderVerificationStatus(status?: string) {
       text: "❌ Ditolak",
       className: "bg-red-50 text-red-700 border-red-200",
     },
-    DEFAULT: {
+    UNVERIFIED: {
       text: "⚠️ Belum Diverifikasi",
       className: "bg-gray-50 text-gray-700 border-gray-200",
     },
   };
 
   const statusKey = status?.toUpperCase() as keyof typeof config;
-  const { text, className } = config[statusKey] || config.DEFAULT;
+  const { text, className } = config[statusKey] || config.UNVERIFIED;
 
   return (
     <span

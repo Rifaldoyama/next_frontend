@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { apiFetch } from "@/lib/api";
+import { showError, showSuccess } from "@/lib/alert";
 
 interface Payment {
   id: string;
@@ -50,27 +51,34 @@ export function usePaymentVerification() {
     }
   }, [filterStatus]);
 
-  const verifyPayment = async (id: string) => {
+  const verifyPayment = async (id: string, catatan?: string) => {
     try {
-      await apiFetch(`/api/admin/kel-pembayaran/verifikasi/${id}`, {
-        method: "PATCH",
+      // ✅ METHOD HARUS POST, bukan PATCH
+      await apiFetch(`/api/admin/kel-pembayaran/verify-payment/${id}`, {
+        method: "POST",
+        body: JSON.stringify({
+          status: "VERIFIED",
+          catatan: catatan,
+        }),
       });
-      fetchPayments(); // Refresh
-      alert("Pembayaran Berhasil Diverifikasi");
+      fetchPayments();
+      showSuccess("Pembayaran Berhasil Diverifikasi");
     } catch (error: any) {
-      alert(error.message);
+      showError(error.message);
     }
   };
 
-  const rejectPayment = async (id: string) => {
+  const rejectPayment = async (id: string, catatan?: string) => {
     if (!confirm("Yakin ingin menolak pembayaran ini?")) return;
     try {
       await apiFetch(`/api/admin/kel-pembayaran/tolak/${id}`, {
         method: "PATCH",
+        body: JSON.stringify({ catatan }),
       });
-      fetchPayments(); // Refresh
+      fetchPayments();
+      showSuccess("Pembayaran Ditolak");
     } catch (error: any) {
-      alert(error.message);
+      showError(error.message);
     }
   };
 

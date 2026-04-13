@@ -110,6 +110,31 @@ export function useTransaction() {
     }
   };
 
+  const downloadReceipt = async (
+    id: string,
+    type: "DP" | "PELUNASAN" | "FULL",
+  ) => {
+    try {
+      const blob = await apiFetch(
+        `/api/peminjaman/${id}/receipt?type=${type}`,
+        {
+          method: "GET",
+          isBlob: true,
+        },
+      );
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `receipt-${type}-${id}.pdf`;
+      a.click();
+
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      showError("Gagal download PDF");
+    }
+  };
+
   // =============================
   // Reset state
   // =============================
@@ -126,5 +151,6 @@ export function useTransaction() {
     createPayment,
     createFullPayment,
     uploadProof,
+    downloadReceipt,
   };
 }

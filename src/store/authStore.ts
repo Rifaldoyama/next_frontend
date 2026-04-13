@@ -11,6 +11,8 @@ type User = {
   need_profile: boolean;
   detail?: {
     nama_lengkap: string;
+    no_hp: string;
+    alamat: string;
     verification_status: string;
   };
 };

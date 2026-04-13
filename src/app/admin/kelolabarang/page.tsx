@@ -28,10 +28,14 @@ export default function KelolaBarangPage() {
     return matchSearch && matchKategori;
   });
 
-  const handleDelete = async (id: string) => {
-    if (confirm("Apakah Anda yakin ingin menghapus barang ini?")) {
-      await deleteBarang(id);
-      alert("Barang berhasil dihapus");
+  const handleDelete = async (id: string, nama: string) => {
+    if (confirm(`Hapus barang "${nama}"?`)) {
+      try {
+        await deleteBarang(id);
+        alert("Barang berhasil dihapus");
+      } catch (err: any) {
+        alert(err.message || "Gagal menghapus barang");
+      }
     }
   };
 
@@ -62,7 +66,10 @@ export default function KelolaBarangPage() {
                 <div className="rounded-full bg-green-500/30 px-4 py-2">
                   <span className="text-sm font-medium">
                     Stok Tersedia:{" "}
-                    {filteredBarang.reduce((acc, item) => acc + item.stok_tersedia, 0)}
+                    {filteredBarang.reduce(
+                      (acc, item) => acc + item.stok_tersedia,
+                      0,
+                    )}
                   </span>
                 </div>
               </div>

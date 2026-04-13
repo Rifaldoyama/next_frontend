@@ -27,6 +27,7 @@ type ValidationErrors = {
   no_hp?: string;
   alamat?: string;
   no_ktp?: string;
+  foto_ktp?: string;
 };
 
 export function UserDetailForm({ onSubmit, initialData }: UserDetailFormProps) {
@@ -69,7 +70,7 @@ export function UserDetailForm({ onSubmit, initialData }: UserDetailFormProps) {
       newErrors.no_hp = "Nomor HP wajib diisi";
     } else {
       const phoneRegex = /^[0-9]{10,13}$/;
-      if (!phoneRegex.test(form.no_hp.replace(/\s/g, ''))) {
+      if (!phoneRegex.test(form.no_hp.replace(/\s/g, ""))) {
         newErrors.no_hp = "Nomor HP harus berupa angka 10-13 digit";
       }
     }
@@ -86,9 +87,13 @@ export function UserDetailForm({ onSubmit, initialData }: UserDetailFormProps) {
     // Validasi No KTP (opsional tapi jika diisi harus valid)
     if (form.no_ktp && form.no_ktp.trim() !== "") {
       const ktpRegex = /^[0-9]{16}$/;
-      if (!ktpRegex.test(form.no_ktp.replace(/\s/g, ''))) {
+      if (!ktpRegex.test(form.no_ktp.replace(/\s/g, ""))) {
         newErrors.no_ktp = "Nomor KTP harus 16 digit angka";
       }
+    }
+
+    if (!fotoKtp && !initialData?.foto_ktp) {
+      newErrors.foto_ktp = "Foto KTP wajib diupload";
     }
 
     setErrors(newErrors);
@@ -178,9 +183,14 @@ export function UserDetailForm({ onSubmit, initialData }: UserDetailFormProps) {
       <div className="space-y-1">
         <FileInput label="Foto KTP" onChange={setFotoKtp} />
 
+        {errors.foto_ktp && (
+          <p className="text-xs text-red-500">{errors.foto_ktp}</p>
+        )}
+
         {initialData?.foto_ktp && !fotoKtp && (
           <p className="text-xs text-blue-600">
-            ℹ️ Foto KTP lama sudah tersimpan. Biarkan kosong jika tidak ingin mengubah.
+            ℹ️ Foto KTP lama sudah tersimpan. Biarkan kosong jika tidak ingin
+            mengubah.
           </p>
         )}
 

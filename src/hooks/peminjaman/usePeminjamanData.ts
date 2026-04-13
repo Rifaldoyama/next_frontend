@@ -50,6 +50,13 @@ export interface Pembayaran {
   catatan?: string;
   createdAt: string;
 }
+//untuk menampilkan detail biaya tambahan seperti ongkir, denda
+export interface BiayaDetail {
+  id: string;
+  tipe: "ONGKIR" | "DENDA" | "DAMAGE" | "ADMIN_FEE" | "DISKON" | "OTHER";
+  label: string;
+  jumlah: number;
+}
 
 export interface Peminjaman {
   id: string;
@@ -99,9 +106,11 @@ export interface Peminjaman {
     nama: string;
     biaya: number;
   };
+  biayaDetails?: BiayaDetail[];
   items: ItemPeminjaman[];
   pembayaran?: Pembayaran[];
   createdAt: string;
+  expired_at?: string;
 }
 
 export function usePeminjamanData() {

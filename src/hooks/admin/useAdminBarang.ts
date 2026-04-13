@@ -4,6 +4,7 @@ import { apiFetch } from "@/lib/api";
 export function useAdminBarang() {
   const [barang, setBarang] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchBarang = async () => {
     setLoading(true);
@@ -16,16 +17,23 @@ export function useAdminBarang() {
   };
 
   const saveBarang = async (payload: any, file?: File, id?: string) => {
+    setError(null);
     const form = new FormData();
     form.append("data", JSON.stringify(payload));
     if (file) form.append("file", file);
 
-    await apiFetch(id ? `/admin/barang/${id}` : "/admin/barang", {
-      method: id ? "PATCH" : "POST",
-      body: form,
-    });
-
-    fetchBarang();
+    try {
+      await apiFetch(id ? `/admin/barang/${id}` : "/admin/barang", {
+        method: id ? "PATCH" : "POST",
+        body: form,
+      });
+      fetchBarang();
+      return { success: true };
+    } catch (err: any) {
+      const errorMsg = err.message || "Gagal menyimpan barang";
+      setError(errorMsg);
+      return { success: false, error: errorMsg };
+    }
   };
 
   const deleteBarang = async (id: string) => {
@@ -45,5 +53,6 @@ export function useAdminBarang() {
     fetchBarang,
     saveBarang,
     deleteBarang,
+    error,
   };
 }

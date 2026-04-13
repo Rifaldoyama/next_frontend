@@ -21,50 +21,35 @@ export function TransactionPanel({ detail, onRefresh, onSuccess }: Props) {
     createPayment,
     createFullPayment,
     uploadProof,
+    downloadReceipt,
   } = useTransaction();
 
   const [selectedRekeningDP, setSelectedRekeningDP] = useState("");
   const [selectedRekeningPelunasan, setSelectedRekeningPelunasan] =
     useState("");
-
+  const [selectedRekeningFull, setSelectedRekeningFull] = useState("");
   const [fileDP, setFileDP] = useState<File | null>(null);
   const [filePelunasan, setFilePelunasan] = useState<File | null>(null);
-  const [selectedRekeningFull, setSelectedRekeningFull] = useState("");
   const [fileFull, setFileFull] = useState<File | null>(null);
-
   const [initialChoice, setInitialChoice] = useState<"DP" | "FULL" | null>(
     null,
   );
-  const hasDP = detail.pembayaran?.some((p: any) => p.tipe === "DP");
 
   const getPaymentState = (payment?: any) => {
     if (!payment) return "EMPTY";
     if (payment.status === "PENDING") return "PENDING";
     if (payment.status === "REJECTED") return "REJECTED";
     if (payment.status === "VERIFIED") return "VERIFIED";
+    return "EMPTY";
   };
 
   // =============================
   // FLAGS
   // =============================
-
   const dpPending = detail.pembayaran?.find(
     (p: any) => p.tipe === "DP" && p.status === "PENDING",
   );
 
-  const dpRejected = detail.pembayaran?.find(
-    (p: any) => p.tipe === "DP" && p.status === "REJECTED",
-  );
-
-  const pelunasanRejected = detail.pembayaran?.find(
-    (p: any) => p.tipe === "PELUNASAN" && p.status === "REJECTED",
-  );
-
-  const fullRejected = detail.pembayaran?.find(
-    (p: any) => p.tipe === "FULL" && p.status === "REJECTED",
-  );
-  // =============================
-  // FLAGS
   const hasPaidDP = detail.pembayaran?.some(
     (p: any) => p.tipe === "DP" && p.status === "VERIFIED",
   );
@@ -85,37 +70,32 @@ export function TransactionPanel({ detail, onRefresh, onSuccess }: Props) {
     (p: any) => p.tipe === "FULL" && p.status === "PENDING",
   );
 
-  const hasPelunasanPending = !!pelunasanPending;
-
   const hasPaidPelunasan = !!pelunasanVerified;
-
-  useEffect(() => {
-    if (hasPaidDP && !hasPaidPelunasan) setInitialChoice(null);
-
-    if (hasPaidFull) setInitialChoice(null);
-  }, [hasPaidDP, hasPaidPelunasan, hasPaidFull]);
+  const isLunas = detail.status_bayar === "LUNAS";
+  const hasActiveDP = detail.pembayaran?.some(
+    (p: any) =>
+      p.tipe === "DP" && (p.status === "PENDING" || p.status === "VERIFIED"),
+  );
 
   // =============================
   // LOAD REKENING
   // =============================
-
   useEffect(() => {
     fetchRekening();
-  }, []);
+  }, [fetchRekening]);
 
   // =============================
   // CREATE DP
   // =============================
-
   const handleCreateDP = async () => {
     if (!selectedRekeningDP) return showError("Pilih rekening");
 
     try {
       await createPayment("DP", detail.id, selectedRekeningDP);
-
-      showSuccess("Tagihan DP berhasil dibuat");
-
-      await onRefresh(); // 🔥 penting
+      showSuccess(
+        "Tagihan DP berhasil dibuat. Silakan upload bukti pembayaran.",
+      );
+      await onRefresh();
     } catch (err: any) {
       showError(err.message);
     }
@@ -126,13 +106,12 @@ export function TransactionPanel({ detail, onRefresh, onSuccess }: Props) {
     if (!fileDP) return showError("Upload file dulu");
 
     if (fileDP.size > 2 * 1024 * 1024) return showError("File maksimal 2MB");
-
     if (!fileDP.type.startsWith("image/"))
       return showError("File harus berupa gambar");
 
     try {
       await uploadProof(dpPending.id, fileDP);
-      showSuccess("Bukti berhasil diupload");
+      showSuccess("Bukti berhasil diupload. Menunggu verifikasi admin.");
       setFileDP(null);
       await onRefresh();
       onSuccess?.();
@@ -144,19 +123,15 @@ export function TransactionPanel({ detail, onRefresh, onSuccess }: Props) {
   // =============================
   // CREATE PELUNASAN
   // =============================
-
   const handleCreatePelunasan = async () => {
     if (loading) return;
     if (!selectedRekeningPelunasan) return showError("Pilih rekening tujuan");
 
-    if (pelunasanRejected) {
-      const confirm = await showConfirm("Buat ulang pembayaran pelunasan?");
-      if (!confirm) return;
-    }
-
     try {
       await createPayment("PELUNASAN", detail.id, selectedRekeningPelunasan);
-      showSuccess("Tagihan pelunasan berhasil dibuat");
+      showSuccess(
+        "Tagihan pelunasan berhasil dibuat. Silakan upload bukti pembayaran.",
+      );
       await onRefresh();
     } catch (err: any) {
       showError(err.message || "Gagal membuat pelunasan");
@@ -169,53 +144,23 @@ export function TransactionPanel({ detail, onRefresh, onSuccess }: Props) {
 
     if (filePelunasan.size > 2 * 1024 * 1024)
       return showError("File maksimal 2MB");
-
     if (!filePelunasan.type.startsWith("image/"))
       return showError("File harus berupa gambar");
 
     try {
       await uploadProof(pelunasanPending.id, filePelunasan);
-
-      showSuccess("Bukti berhasil diupload");
+      showSuccess("Bukti berhasil diupload. Menunggu verifikasi admin.");
       setFilePelunasan(null);
-
       await onRefresh();
       onSuccess?.();
     } catch (err: any) {
       showError(err.message || "Gagal upload bukti");
     }
   };
-  const dp = detail.pembayaran?.find((p: any) => p.tipe === "DP");
-  const dpState = getPaymentState(dp);
-  const pelunasan = detail.pembayaran?.find((p: any) => p.tipe === "PELUNASAN");
-  const pelunasanState = getPaymentState(pelunasan);
-  const full = detail.pembayaran?.find((p: any) => p.tipe === "FULL");
-  const fullState = getPaymentState(full);
-
-  useEffect(() => {
-    if (dpState === "REJECTED") {
-      setSelectedRekeningDP("");
-      setFileDP(null);
-    }
-
-    if (pelunasanState === "REJECTED") {
-      setSelectedRekeningPelunasan("");
-      setFilePelunasan(null);
-    }
-
-    if (fullState === "REJECTED") {
-      setSelectedRekeningFull("");
-      setFileFull(null);
-    }
-  }, [dpState, pelunasanState, fullState]);
-
-  const canUploadDP = dp?.status === "PENDING";
-  const isRejectedDP = dp?.status === "REJECTED";
 
   // =============================
   // CREATE FULL
   // =============================
-
   const handleCreateFull = async () => {
     if (loading) return;
     if (!selectedRekeningFull) return showError("Pilih rekening");
@@ -228,10 +173,11 @@ export function TransactionPanel({ detail, onRefresh, onSuccess }: Props) {
 
     try {
       await createFullPayment(detail.id, selectedRekeningFull);
-      showSuccess("Tagihan full berhasil dibuat");
+      showSuccess(
+        "Tagihan full berhasil dibuat! Silakan upload bukti pembayaran Anda.",
+      );
+      setInitialChoice("FULL");
       await onRefresh();
-      setInitialChoice(null);
-      onSuccess?.();
     } catch (err: any) {
       showError(err.message || "Gagal membuat pembayaran full");
     }
@@ -242,13 +188,12 @@ export function TransactionPanel({ detail, onRefresh, onSuccess }: Props) {
     if (!fileFull) return showError("Upload file dulu");
 
     if (fileFull.size > 2 * 1024 * 1024) return showError("File maksimal 2MB");
-
     if (!fileFull.type.startsWith("image/"))
       return showError("File harus berupa gambar");
 
     try {
       await uploadProof(fullPending.id, fileFull);
-      showSuccess("Bukti berhasil diupload");
+      showSuccess("Bukti berhasil diupload. Menunggu verifikasi admin.");
       setFileFull(null);
       await onRefresh();
       onSuccess?.();
@@ -257,8 +202,46 @@ export function TransactionPanel({ detail, onRefresh, onSuccess }: Props) {
     }
   };
 
+  const handlePrint = async (type: "DP" | "PELUNASAN" | "FULL") => {
+    await downloadReceipt(detail.id, type);
+  };
+
   // =============================
-  // INITIAL CHOICE
+  // COMPUTED VALUES
+  // =============================
+  const dp = detail.pembayaran?.find((p: any) => p.tipe === "DP");
+  const dpState = getPaymentState(dp);
+  const pelunasan = detail.pembayaran?.find((p: any) => p.tipe === "PELUNASAN");
+  const pelunasanState = getPaymentState(pelunasan);
+  const full = detail.pembayaran?.find((p: any) => p.tipe === "FULL");
+  const fullState = getPaymentState(full);
+
+  const totalSewa = detail.total_sewa;
+  const ongkir =
+    detail.biayaDetails?.find((b: any) => b.tipe === "ONGKIR")?.jumlah || 0;
+  const depositAmount =
+    detail.jaminan_tipe === "DEPOSIT_UANG" ? detail.deposit : 0;
+  const totalFull = totalSewa + ongkir + depositAmount;
+  const totalDP = detail.nominal_dp + depositAmount + ongkir;
+
+  // Reset state ketika REJECTED
+  useEffect(() => {
+    if (dpState === "REJECTED") {
+      setSelectedRekeningDP("");
+      setFileDP(null);
+    }
+    if (pelunasanState === "REJECTED") {
+      setSelectedRekeningPelunasan("");
+      setFilePelunasan(null);
+    }
+    if (fullState === "REJECTED") {
+      setSelectedRekeningFull("");
+      setFileFull(null);
+    }
+  }, [dpState, pelunasanState, fullState]);
+
+  // =============================
+  // EARLY RETURN - MENUNGGU PERSETUJUAN
   // =============================
   if (
     detail.metode_ambil === "DIANTAR" &&
@@ -273,40 +256,27 @@ export function TransactionPanel({ detail, onRefresh, onSuccess }: Props) {
     );
   }
 
+  // =============================
+  // EARLY RETURN - PILIH METODE
+  // =============================
   if (
     detail.status_bayar === "BELUM_BAYAR" &&
     !initialChoice &&
     !dpPending &&
-    !fullPending
+    !fullPending &&
+    !hasActiveDP &&
+    !hasPaidFull
   ) {
     return (
       <Card className="p-4 space-y-2">
         <h3 className="font-bold">Pilih metode pembayaran</h3>
-
         <Button onClick={() => setInitialChoice("DP")}>Bayar DP dulu</Button>
-
         <Button onClick={() => setInitialChoice("FULL")}>
           Bayar Full langsung
         </Button>
       </Card>
     );
   }
-
-  const totalSewa = detail.total_sewa;
-  const ongkir = detail.zona?.biaya || 0;
-  const depositAmount =
-    detail.jaminan_tipe === "DEPOSIT_UANG" ? detail.deposit : 0;
-
-  const totalFull = totalSewa + ongkir + depositAmount;
-  const totalDP = detail.nominal_dp + depositAmount + ongkir;
-
-  console.log(
-    "Detail pembayaran:",
-    detail.total_biaya,
-    detail.nominal_dp,
-    depositAmount,
-  );
-
 
   return (
     <Card className="space-y-6">
@@ -319,128 +289,148 @@ export function TransactionPanel({ detail, onRefresh, onSuccess }: Props) {
         pembayaran={detail.pembayaran}
       />
 
+      <div className="flex gap-2 flex-wrap">
+        {!isLunas && hasPaidDP && (
+          <Button onClick={() => handlePrint("DP")}>Cetak Struk DP</Button>
+        )}
+        {isLunas && (
+          <Button onClick={() => handlePrint("PELUNASAN")}>
+            Cetak Struk Pelunasan
+          </Button>
+        )}
+      </div>
+
       {/* ===================== */}
       {/* SECTION DP */}
       {/* ===================== */}
+      {!hasPaidDP &&
+        !fullPending &&
+        !hasPaidFull &&
+        (initialChoice === "DP" || hasActiveDP) && (
+          <div className="border p-4 rounded bg-yellow-50 space-y-3">
+            <h4 className="font-semibold text-yellow-900">
+              Pembayaran DP & Jaminan
+            </h4>
 
-      {!hasPaidDP && !fullPending && (initialChoice === "DP" || hasDP) && (
-        <div className="border p-4 rounded bg-yellow-50 space-y-3">
-          <h4 className="font-semibold text-yellow-900">
-            Pembayaran DP & Jaminan
-          </h4>
-
-          <div className="space-y-1 text-sm text-yellow-800 bg-white/50 p-2 rounded border border-yellow-200">
-            <div className="flex justify-between">
-              <span>DP Sewa (35%):</span>
-              <span>Rp {detail.nominal_dp.toLocaleString()}</span>
-            </div>
-            {depositAmount > 0 && (
-              <div className="flex justify-between font-medium">
-                <span>Deposit Jaminan (40%):</span>
-                <span>Rp {depositAmount.toLocaleString()}</span>
-              </div>
-            )}
-            {ongkir > 0 && (
+            <div className="space-y-1 text-sm text-yellow-800 bg-white/50 p-2 rounded border border-yellow-200">
               <div className="flex justify-between">
-                <span>Biaya Pengiriman:</span>
-                <span>Rp {ongkir.toLocaleString()}</span>
+                <span>DP Sewa (35%):</span>
+                <span>Rp {detail.nominal_dp.toLocaleString()}</span>
               </div>
-            )}
-            {!dpPending && (<div className="flex justify-between border-t border-yellow-300 pt-1 font-bold text-base">
-              <span>Total Bayar Sekarang:</span>
-              <span>Rp {totalDP.toLocaleString()}</span>
+              {depositAmount > 0 && (
+                <div className="flex justify-between font-medium">
+                  <span>Deposit Jaminan (40%):</span>
+                  <span>Rp {depositAmount.toLocaleString()}</span>
+                </div>
+              )}
+              {ongkir > 0 && (
+                <div className="flex justify-between">
+                  <span>Biaya Pengiriman:</span>
+                  <span>Rp {ongkir.toLocaleString()}</span>
+                </div>
+              )}
+              {!dpPending && (
+                <div className="flex justify-between border-t border-yellow-300 pt-1 font-bold text-base">
+                  <span>Total Bayar Sekarang:</span>
+                  <span>Rp {totalDP.toLocaleString()}</span>
+                </div>
+              )}
             </div>
-            )}
-          </div>
 
-          <p className="text-[10px] text-yellow-700 italic">
-            *Uang deposit akan dikembalikan setelah alat kembali dalam kondisi
-            baik.
-          </p>
+            <p className="text-[10px] text-yellow-700 italic">
+              *Uang deposit akan dikembalikan setelah alat kembali dalam kondisi
+              baik.
+            </p>
 
-          {dpState === "PENDING" ? (
-            !dp?.bukti_pembayaran ? (
+            {dpPending && !dp?.bukti_pembayaran ? (
               <>
-                <input type="file" onChange={(e) => setFileDP(e.target.files?.[0] || null)} />
+                <div className="bg-blue-100 p-2 rounded text-sm">
+                  ⚠️ Tagihan DP sudah dibuat. Silakan upload bukti pembayaran
+                  Anda.
+                </div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setFileDP(e.target.files?.[0] || null)}
+                />
                 <Button onClick={handleUploadDP}>Upload Bukti DP</Button>
               </>
+            ) : dpPending && dp?.bukti_pembayaran ? (
+              <div className="bg-blue-100 p-3 rounded text-blue-700">
+                ✅ Bukti sudah diupload. Menunggu verifikasi admin.
+              </div>
             ) : (
-              <div>Menunggu verifikasi admin</div>
-            )
-          ) : (
-            <>
-              {dpState === "REJECTED" && (
-                <div className="text-red-600">DP ditolak, pilih ulang</div>
-              )}
-
-              <select
-                value={selectedRekeningDP}
-                onChange={(e) => setSelectedRekeningDP(e.target.value)}
-                className="w-full border p-2 rounded"
-              >
-                <option value="">Pilih rekening tujuan</option>
-                {rekeningList.map((rek) => (
-                  <option key={rek.id} value={rek.id}>
-                    {rek.nama} - {rek.nomor}
-                  </option>
-                ))}
-              </select>
-
-              <Button onClick={handleCreateDP}>Buat Tagihan DP</Button>
-            </>
-          )}
-        </div>
-      )}
+              <>
+                {dpState === "REJECTED" && (
+                  <div className="bg-red-100 p-2 rounded text-red-600">
+                    ❌ DP ditolak. Silakan pilih rekening dan buat tagihan
+                    ulang.
+                  </div>
+                )}
+                <select
+                  value={selectedRekeningDP}
+                  onChange={(e) => setSelectedRekeningDP(e.target.value)}
+                  className="w-full border p-2 rounded"
+                >
+                  <option value="">Pilih rekening tujuan</option>
+                  {rekeningList.map((rek) => (
+                    <option key={rek.id} value={rek.id}>
+                      {rek.nama} - {rek.nomor} (a.n. {rek.atas_nama})
+                    </option>
+                  ))}
+                </select>
+                <Button onClick={handleCreateDP}>Buat Tagihan DP</Button>
+              </>
+            )}
+          </div>
+        )}
 
       {/* ===================== */}
       {/* SECTION PELUNASAN */}
       {/* ===================== */}
-
-      {hasPaidDP && !hasPaidPelunasan && (
+      {hasPaidDP && !hasPaidPelunasan && !hasPaidFull && (
         <div className="border p-4 rounded bg-blue-50 space-y-3">
           <h4 className="font-semibold">Pelunasan</h4>
 
-          {pelunasanState === "PENDING" ? (
-            !pelunasan?.bukti_pembayaran ? (
-              <>
-                <input
-                  type="file"
-                  onChange={(e) =>
-                    setFilePelunasan(e.target.files?.[0] || null)
-                  }
-                />
-                <Button onClick={handleUploadPelunasan}>
-                  Upload Bukti Pelunasan
-                </Button>
-              </>
-            ) : (
-              <div className="text-blue-700">
-                Bukti sudah diupload, menunggu verifikasi admin
+          {pelunasanPending && !pelunasan?.bukti_pembayaran ? (
+            <>
+              <div className="bg-blue-100 p-2 rounded text-sm">
+                ⚠️ Tagihan pelunasan sudah dibuat. Silakan upload bukti
+                pembayaran Anda.
               </div>
-            )
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setFilePelunasan(e.target.files?.[0] || null)}
+              />
+              <Button onClick={handleUploadPelunasan}>
+                Upload Bukti Pelunasan
+              </Button>
+            </>
+          ) : pelunasanPending && pelunasan?.bukti_pembayaran ? (
+            <div className="bg-blue-100 p-3 rounded text-blue-700">
+              ✅ Bukti sudah diupload. Menunggu verifikasi admin.
+            </div>
           ) : (
             <>
               {pelunasanState === "REJECTED" && (
-                <div className="text-red-600">
-                  Pelunasan ditolak, silakan pilih rekening ulang
+                <div className="bg-red-100 p-2 rounded text-red-600">
+                  ❌ Pelunasan ditolak. Silakan pilih rekening dan buat tagihan
+                  ulang.
                 </div>
               )}
-
               <select
                 value={selectedRekeningPelunasan}
-                onChange={(e) =>
-                  setSelectedRekeningPelunasan(e.target.value)
-                }
+                onChange={(e) => setSelectedRekeningPelunasan(e.target.value)}
                 className="w-full border p-2 rounded"
               >
                 <option value="">Pilih rekening tujuan</option>
                 {rekeningList.map((rek) => (
                   <option key={rek.id} value={rek.id}>
-                    {rek.nama} - {rek.nomor}
+                    {rek.nama} - {rek.nomor} (a.n. {rek.atas_nama})
                   </option>
                 ))}
               </select>
-
               <Button onClick={handleCreatePelunasan}>
                 Buat Tagihan Pelunasan
               </Button>
@@ -452,79 +442,96 @@ export function TransactionPanel({ detail, onRefresh, onSuccess }: Props) {
       {/* ===================== */}
       {/* SECTION FULL */}
       {/* ===================== */}
-
-      {initialChoice === "FULL" && !hasPaidFull && (
+      {(initialChoice === "FULL" || fullPending) && !hasPaidFull && (
         <div className="border p-4 rounded bg-green-50 space-y-3">
           <h4 className="font-semibold">Pembayaran Full</h4>
 
-          {fullState === "PENDING" ? (
+          {fullPending ? (
             !full?.bukti_pembayaran ? (
               <>
+                <div className="bg-yellow-100 p-2 rounded text-sm">
+                  ⚠️ Tagihan full sudah dibuat. Silakan upload bukti pembayaran
+                  Anda.
+                </div>
+                {fileFull && (
+                  <div className="text-sm text-green-600">
+                    File siap upload: {fileFull.name}
+                  </div>
+                )}
                 <input
                   type="file"
+                  accept="image/*"
                   onChange={(e) => setFileFull(e.target.files?.[0] || null)}
+                  className="border p-2 rounded"
                 />
-                <Button onClick={handleUploadFull}>
+                <Button onClick={handleUploadFull} disabled={!fileFull}>
                   Upload Bukti Full
                 </Button>
+                <div className="text-xs text-gray-500">
+                  ℹ️ Setelah upload, admin akan memverifikasi pembayaran Anda.
+                </div>
               </>
             ) : (
-              <div className="text-green-700">
-                Bukti sudah diupload, menunggu verifikasi admin
+              <div className="bg-blue-100 p-3 rounded text-blue-700">
+                ✅ Bukti sudah diupload. Menunggu verifikasi admin.
               </div>
             )
           ) : (
             <>
               {fullState === "REJECTED" && (
-                <div className="text-red-600">
-                  Pembayaran ditolak, silakan pilih ulang
+                <div className="bg-red-100 p-2 rounded text-red-600">
+                  ❌ Pembayaran ditolak. Silakan pilih rekening dan buat tagihan
+                  ulang.
                 </div>
               )}
 
-              {/* RINCIAN */}
-              <div className="space-y-1 text-sm">
+              <div className="space-y-1 text-sm bg-white p-2 rounded">
                 <div className="flex justify-between">
                   <span>Total Sewa:</span>
                   <span>Rp {totalSewa.toLocaleString()}</span>
                 </div>
-
                 {ongkir > 0 && (
                   <div className="flex justify-between">
                     <span>Ongkir:</span>
                     <span>Rp {ongkir.toLocaleString()}</span>
                   </div>
                 )}
-
                 {depositAmount > 0 && (
                   <div className="flex justify-between text-orange-600">
                     <span>Deposit:</span>
                     <span>Rp {depositAmount.toLocaleString()}</span>
                   </div>
                 )}
-
                 <div className="flex justify-between font-bold border-t pt-1">
                   <span>Total Bayar:</span>
                   <span>Rp {totalFull.toLocaleString()}</span>
                 </div>
               </div>
 
-              {/* SELECT */}
               <select
                 value={selectedRekeningFull}
                 onChange={(e) => setSelectedRekeningFull(e.target.value)}
                 className="w-full border p-2 rounded"
               >
-                <option value="">Pilih rekening</option>
+                <option value="">Pilih rekening tujuan</option>
                 {rekeningList.map((rek) => (
                   <option key={rek.id} value={rek.id}>
-                    {rek.nama} - {rek.nomor}
+                    {rek.nama} - {rek.nomor} (a.n. {rek.atas_nama})
                   </option>
                 ))}
               </select>
 
-              <Button onClick={handleCreateFull}>
+              <Button
+                onClick={handleCreateFull}
+                disabled={!selectedRekeningFull}
+              >
                 Buat Tagihan Full
               </Button>
+
+              <div className="text-xs text-gray-500 mt-2">
+                ℹ️ Setelah membuat tagihan, Anda akan diminta untuk upload bukti
+                pembayaran.
+              </div>
             </>
           )}
         </div>
