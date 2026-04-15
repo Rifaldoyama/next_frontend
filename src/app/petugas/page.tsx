@@ -208,6 +208,21 @@ export default function PetugasDashboard() {
       );
     }
 
+    // DIPROSES - Proses Serah Terima (untuk kedua metode)
+    if (status === StatusPeminjaman.DIPROSES) {
+      return (
+        <div className="space-y-2 pt-1">
+          {detailButton}
+          <Link
+            href={`/petugas/detail/${peminjaman.id}`}
+            className="flex items-center justify-center gap-2 w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition"
+          >
+            <Printer className="w-4 h-4" />
+            <span>Proses Serah Terima & Cetak Surat</span>
+          </Link>
+        </div>
+      );
+    }
     // CONFIRM ARRIVAL (DIPROSES - KHUSUS DIANTAR)
     if (status === StatusPeminjaman.DIPROSES && metode === "DIANTAR") {
       return (
@@ -223,21 +238,6 @@ export default function PetugasDashboard() {
               ? "Memproses..."
               : "Konfirmasi Sampai Tujuan"}
           </button>
-        </div>
-      );
-    }
-
-    if (status === StatusPeminjaman.DIPROSES && metode === "AMBIL_SENDIRI") {
-      return (
-        <div className="space-y-2 pt-1">
-          {detailButton}
-          <Link
-            href={`/petugas/detail/${peminjaman.id}`}
-            className="flex items-center justify-center gap-2 w-full bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition"
-          >
-            <Package className="w-4 h-4" />
-            <span>Serah Terima Barang</span>
-          </Link>
         </div>
       );
     }
@@ -258,7 +258,6 @@ export default function PetugasDashboard() {
       );
     }
 
-    // PRINT SURAT (SELESAI)
     // PRINT SURAT & KEMBALIKAN JAMINAN (SELESAI)
     if (status === StatusPeminjaman.SELESAI) {
       const isJaminanFisik =
@@ -269,14 +268,6 @@ export default function PetugasDashboard() {
       return (
         <div className="space-y-2 pt-1">
           {detailButton}
-          <button
-            onClick={() => printSurat(peminjaman.id)}
-            className="flex items-center justify-center gap-2 w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition"
-          >
-            <Printer className="w-4 h-4" />
-            <span>Cetak Surat Serah Terima</span>
-          </button>
-
           {/* ✅ Tombol Kembalikan Jaminan (hanya untuk jaminan fisik yang belum dikembalikan) */}
           {isJaminanFisik && isJaminanBelumKembali && (
             <Link

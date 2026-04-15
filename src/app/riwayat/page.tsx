@@ -114,31 +114,45 @@ function HistoryCard({
 }) {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "DIAJUKAN":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case "DISETUJUI":
-        return "bg-blue-100 text-blue-800 border-blue-200";
-      case "DIANTAR":
+      case "MENUNGGU_PERSETUJUAN":
+        return "bg-yellow-100 text-yellow-800";
+      case "SIAP_DIPROSES":
+        return "bg-blue-100 text-blue-800";
+      case "DIPROSES":
+        return "bg-purple-100 text-purple-800";
       case "DIPAKAI":
-        return "bg-green-100 text-green-800 border-green-200";
+        return "bg-green-100 text-green-800";
       case "SELESAI":
-        return "bg-gray-100 text-gray-800 border-gray-200";
+        return "bg-gray-100 text-gray-800";
       case "DITOLAK":
-        return "bg-red-100 text-red-800 border-red-200";
+        return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-600";
     }
+  };
+
+  const getStatusText = (status: string) => {
+    const statusMap: Record<string, string> = {
+      MENUNGGU_PERSETUJUAN: "Menunggu Persetujuan",
+      SIAP_DIPROSES: "Siap Diproses",
+      DIPROSES: "Sedang Diproses",
+      DIPAKAI: "Sedang Digunakan",
+      SELESAI: "Selesai",
+      DITOLAK: "Ditolak",
+    };
+    return statusMap[status] || status;
   };
 
   const ongkirDetail = sewa.biayaDetails?.find((b) => b.tipe === "ONGKIR");
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "DIAJUKAN":
+      case "MENUNGGU_PERSETUJUAN":
         return <Clock className="w-3 h-3" />;
-      case "DISETUJUI":
+      case "SIAP_DIPROSES":
         return <Calendar className="w-3 h-3" />;
-      case "DIANTAR":
+      case "DIPROSES":
+        return <Package className="w-3 h-3" />;
       case "DIPAKAI":
         return <Package className="w-3 h-3" />;
       case "SELESAI":
@@ -166,6 +180,9 @@ function HistoryCard({
   const barangItems = sewa.items || [];
   const paket = sewa.paket;
 
+  const totalBiayaTambahan =
+    sewa.biayaDetails?.reduce((sum, item) => sum + (item.jumlah || 0), 0) || 0;
+
   return (
     <div className="group bg-white rounded-2xl shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100 overflow-hidden">
       {/* HEADER CARD */}
@@ -191,7 +208,7 @@ function HistoryCard({
             </div>
           )}
 
-          <div>
+          {/* <div>
             <p className="text-xs text-gray-500 font-medium">DP</p>
             <p className="text-sm font-semibold text-gray-800">
               {formatRupiah(sewa.nominal_dp)}
@@ -203,7 +220,7 @@ function HistoryCard({
             <p className="text-sm font-semibold text-gray-800">
               {formatRupiah(sewa.sisa_tagihan)}
             </p>
-          </div>
+          </div> */}
         </div>
 
         {/* Status Badge */}
@@ -215,6 +232,119 @@ function HistoryCard({
             {sewa.status_pinjam}
           </span>
         </div>
+        {sewa.status_pinjam === "SELESAI" && (
+          <div className="mt-3 space-y-2">
+            {/* Info Deposit */}
+            {sewa.jaminan_tipe === "DEPOSIT_UANG" && sewa.deposit > 0 && (
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100/50 p-3 rounded-lg border border-blue-200">
+                <p className="text-sm font-medium text-blue-800 mb-2 flex items-center gap-1">
+                  <CreditCard className="w-4 h-4" />
+                  Info Deposit Jaminan
+                </p>
+                <div className="space-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Deposit Awal:</span>
+                    <span className="font-medium">
+                      {formatRupiah(sewa.deposit)}
+                    </span>
+                  </div>
+                  {/* ✅ Gunakan fallback || 0 */}
+                  {(sewa.total_denda || 0) > 0 && (
+                    <div className="flex justify-between text-red-600">
+                      <span>Potongan Denda:</span>
+                      <span>- {formatRupiah(sewa.total_denda || 0)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-semibold border-t border-blue-200 pt-1 mt-1">
+                    <span>Dikembalikan:</span>
+                    <span
+                      className={
+                        sewa.deposit_dikembalikan
+                          ? "text-green-600"
+                          : "text-orange-600"
+                      }
+                    >
+                      {sewa.deposit_dikembalikan
+                        ? formatRupiah(sewa.deposit_kembali || 0) // ✅ Fallback
+                        : "Menunggu admin"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Info Denda + Jaminan Fisik */}
+            {sewa.jaminan_tipe !== "DEPOSIT_UANG" &&
+              (sewa.total_denda || 0) > 0 && (
+                <div className="bg-gradient-to-r from-yellow-50 to-orange-50/50 p-3 rounded-lg border border-yellow-200">
+                  <p className="text-sm font-medium text-yellow-800 mb-2">
+                    Status Denda & Jaminan
+                  </p>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Total Denda:</span>
+                      <span className="text-red-600 font-medium">
+                        {formatRupiah(sewa.total_denda || 0)}
+                      </span>
+                    </div>
+                    {(() => {
+                      const dendaPayment = sewa.pembayaran?.find(
+                        (p: any) => p.tipe === "DENDA",
+                      );
+                      return (
+                        <>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Status Denda:</span>
+                            <span
+                              className={
+                                !dendaPayment
+                                  ? "text-orange-600"
+                                  : dendaPayment.status === "PENDING"
+                                    ? "text-yellow-600"
+                                    : dendaPayment.status === "VERIFIED"
+                                      ? "text-green-600"
+                                      : "text-red-600"
+                              }
+                            >
+                              {!dendaPayment
+                                ? "Belum dibayar"
+                                : dendaPayment.status === "PENDING"
+                                  ? "Menunggu Verifikasi"
+                                  : dendaPayment.status === "VERIFIED"
+                                    ? "Lunas"
+                                    : "Ditolak"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">
+                              Status Jaminan:
+                            </span>
+                            <span
+                              className={
+                                sewa.jaminan_status === "DIKEMBALIKAN"
+                                  ? "text-green-600"
+                                  : "text-orange-600"
+                              }
+                            >
+                              {sewa.jaminan_status === "DIKEMBALIKAN"
+                                ? "Sudah dikembalikan"
+                                : "Belum dikembalikan"}
+                            </span>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                  {sewa.jaminan_tipe && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      Jaminan: {sewa.jaminan_tipe} -{" "}
+                      {sewa.jaminan_detail || "-"}
+                    </p>
+                  )}
+                </div>
+              )}
+          </div>
+        )}
       </div>
 
       {/* BODY CARD (LIST BARANG) */}
@@ -298,8 +428,13 @@ function HistoryCard({
         <div>
           <p className="text-xs text-gray-500">Total Tagihan</p>
           <p className="text-xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
-            {formatRupiah(sewa.total_sewa + (sewa.deposit || 0))}
+            {formatRupiah(sewa.total_tagihan || sewa.total_sewa)}
           </p>
+          {sewa.deposit > 0 && (
+            <p className="text-xs text-orange-500">
+              + Deposit {formatRupiah(sewa.deposit)} (akan dikembalikan)
+            </p>
+          )}
         </div>
 
         <button

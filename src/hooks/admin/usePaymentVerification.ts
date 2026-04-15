@@ -1,5 +1,4 @@
 "use client";
-
 import { useState, useCallback, useEffect } from "react";
 import { apiFetch } from "@/lib/api";
 import { showError, showSuccess } from "@/lib/alert";
@@ -7,18 +6,36 @@ import { showError, showSuccess } from "@/lib/alert";
 interface Payment {
   id: string;
   jumlah: number;
-  tipe: "DP" | "PELUNASAN";
+  tipe: "DP" | "PELUNASAN" | "FULL" | "DENDA" | "REFUND_DEPOSIT";
   status: "PENDING" | "VERIFIED" | "REJECTED";
   createdAt: string;
-
   peminjaman: {
     id: string;
     user: {
       username: string;
+      email?: string;
+      detail?: {
+        nama_lengkap?: string;
+      };
     };
   };
-
+  rekeningTujuan?: {
+    id: string;
+    nama: string;
+    nomor: string;
+    atas_nama: string;
+  };
+  allocations?: Array<{
+    tipe: string;
+    jumlah: number;
+  }>;
+  ringkasan?: {
+    dp: number;
+    deposit: number;
+    pelunasan: number;
+  };
   bukti_url?: string | null;
+  bukti_pembayaran?: string;
 }
 
 export function usePaymentVerification() {
@@ -33,16 +50,22 @@ export function usePaymentVerification() {
     "ALL" | "PENDING" | "VERIFIED" | "REJECTED"
   >("ALL");
 
+  // ✅ PERBAIKAN: fetchPayments dengan mapping yang aman
   const fetchPayments = useCallback(async () => {
     setLoading(true);
-
     try {
       let url = "/api/admin/kel-pembayaran/verifikasi-list";
-      if (filterStatus !== "ALL") {
-        url += `?status=${filterStatus}`;
-      }
-      const res = await apiFetch(url);
 
+      // Mapping filterStatus ke query parameter
+      let statusParam = "";
+      if (filterStatus === "ALL") {
+        statusParam = "PENDING"; // Default untuk admin: tampilkan pending
+      } else {
+        statusParam = filterStatus;
+      }
+
+      url += `?status=${statusParam}`;
+      const res = await apiFetch(url);
       setPayments(res);
     } catch (error) {
       console.error("Failed to fetch payments", error);
@@ -53,7 +76,6 @@ export function usePaymentVerification() {
 
   const verifyPayment = async (id: string, catatan?: string) => {
     try {
-      // ✅ METHOD HARUS POST, bukan PATCH
       await apiFetch(`/api/admin/kel-pembayaran/verify-payment/${id}`, {
         method: "POST",
         body: JSON.stringify({
@@ -71,9 +93,12 @@ export function usePaymentVerification() {
   const rejectPayment = async (id: string, catatan?: string) => {
     if (!confirm("Yakin ingin menolak pembayaran ini?")) return;
     try {
-      await apiFetch(`/api/admin/kel-pembayaran/tolak/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ catatan }),
+      await apiFetch(`/api/admin/kel-pembayaran/verify-payment/${id}`, {
+        method: "POST",
+        body: JSON.stringify({
+          status: "REJECTED",
+          catatan: catatan,
+        }),
       });
       fetchPayments();
       showSuccess("Pembayaran Ditolak");
@@ -82,11 +107,10 @@ export function usePaymentVerification() {
     }
   };
 
-  // Logic Filtering
+  // Logic Filtering (local filter untuk tipe dan tanggal)
   const filteredPayments = payments.filter((p) => {
     const matchType = filterType === "ALL" || p.tipe === filterType;
     const matchDate = !filterDate || p.createdAt.startsWith(filterDate);
-
     return matchType && matchDate;
   });
 

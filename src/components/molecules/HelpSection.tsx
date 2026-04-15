@@ -37,7 +37,7 @@ export const HelpSection = ({ phoneNumber }: HelpSectionProps) => {
           </div>
           <div className="flex items-center gap-2">
             <MessageCircle className="w-4 h-4 text-green-500" />
-            <span className="text-xs text-gray-500">Live Chat</span>
+            <span className="text-xs text-gray-500">Chat</span>
           </div>
         </div>
       </div>

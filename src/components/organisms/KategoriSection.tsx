@@ -19,7 +19,7 @@ export function KategoriSection({ items }: { items: Kategori[] }) {
   return (
     <section className="relative">
       {/* Section Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 mt-6">
         <div>
           <div className="flex items-center gap-2 mb-2">
             <Grid className="w-5 h-5 text-orange-500" />
@@ -31,7 +31,7 @@ export function KategoriSection({ items }: { items: Kategori[] }) {
             Pilih kategori peralatan yang Anda butuhkan
           </p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-gray-400">
+        <div className="flex items-center gap-2 text-xs text-black">
           <Sparkles className="w-3 h-3" />
           <span>{filteredItems.length} Kategori Tersedia</span>
         </div>

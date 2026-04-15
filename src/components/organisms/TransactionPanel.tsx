@@ -77,6 +77,9 @@ export function TransactionPanel({ detail, onRefresh, onSuccess }: Props) {
       p.tipe === "DP" && (p.status === "PENDING" || p.status === "VERIFIED"),
   );
 
+  // Cek apakah DP sudah diverifikasi (bukan hanya status_bayar)
+  const isDPVerified = detail.status_bayar === "DP_DITERIMA" || hasPaidDP;
+
   // =============================
   // LOAD REKENING
   // =============================
@@ -204,6 +207,40 @@ export function TransactionPanel({ detail, onRefresh, onSuccess }: Props) {
 
   const handlePrint = async (type: "DP" | "PELUNASAN" | "FULL") => {
     await downloadReceipt(detail.id, type);
+  };
+
+  const dendaPending = detail.pembayaran?.find(
+    (p: any) => p.tipe === "DENDA" && p.status === "PENDING",
+  );
+
+  const dendaVerified = detail.pembayaran?.find(
+    (p: any) => p.tipe === "DENDA" && p.status === "VERIFIED",
+  );
+  const dendaRejected = detail.pembayaran?.find(
+    (p: any) => p.tipe === "DENDA" && p.status === "REJECTED",
+  );
+
+  // State untuk denda
+  const [selectedRekeningDenda, setSelectedRekeningDenda] = useState("");
+  const [fileDenda, setFileDenda] = useState<File | null>(null);
+
+  const handleUploadDenda = async () => {
+    if (!dendaPending) return showError("Belum ada tagihan denda");
+    if (!fileDenda) return showError("Upload file dulu");
+
+    if (fileDenda.size > 2 * 1024 * 1024) return showError("File maksimal 2MB");
+    if (!fileDenda.type.startsWith("image/"))
+      return showError("File harus berupa gambar");
+
+    try {
+      await uploadProof(dendaPending.id, fileDenda);
+      showSuccess("Bukti pembayaran denda berhasil diupload");
+      setFileDenda(null);
+      await onRefresh();
+      onSuccess?.();
+    } catch (err: any) {
+      showError(err.message || "Gagal upload bukti");
+    }
   };
 
   // =============================
@@ -533,6 +570,130 @@ export function TransactionPanel({ detail, onRefresh, onSuccess }: Props) {
                 pembayaran.
               </div>
             </>
+          )}
+        </div>
+      )}
+      {/* ===================== */}
+      {/* SECTION DENDA */}
+      {/* ===================== */}
+      {detail.status_pinjam === "SELESAI" && detail.total_denda > 0 && (
+        <div className="border-t pt-4 mt-4">
+          {dendaPending && !dendaVerified && (
+            <div className="border p-4 rounded bg-red-50 space-y-3">
+              <h4 className="font-semibold text-red-900 flex items-center gap-2">
+                <span className="text-xl">⚠️</span> Tagihan Denda
+              </h4>
+
+              <div className="bg-white p-3 rounded space-y-2">
+                <p className="text-sm text-gray-600">
+                  Terdapat denda yang harus dibayar:
+                </p>
+
+                {/* Detail denda dari biayaDetails */}
+                {detail.biayaDetails
+                  ?.filter((b: any) => b.tipe === "DENDA")
+                  .map((denda: any, idx: number) => (
+                    <div
+                      key={idx}
+                      className="text-sm border-l-4 border-red-400 pl-3"
+                    >
+                      <p className="font-medium">{denda.label}</p>
+                      <p className="text-red-600 font-semibold">
+                        Rp {denda.jumlah.toLocaleString()}
+                      </p>
+                    </div>
+                  ))}
+
+                <div className="border-t pt-2 mt-2">
+                  <div className="flex justify-between font-bold">
+                    <span>Total Denda:</span>
+                    <span className="text-red-600">
+                      Rp {(detail.total_denda || 0).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {!dendaPending?.bukti_pembayaran ? (
+                <>
+                  <div className="bg-yellow-100 p-2 rounded text-sm">
+                    ⚠️ Silakan transfer ke rekening di bawah dan upload bukti
+                    pembayaran
+                  </div>
+
+                  <select
+                    value={selectedRekeningDenda}
+                    onChange={(e) => setSelectedRekeningDenda(e.target.value)}
+                    className="w-full border p-2 rounded"
+                  >
+                    <option value="">Pilih rekening tujuan</option>
+                    {rekeningList.map((rek) => (
+                      <option key={rek.id} value={rek.id}>
+                        {rek.nama} - {rek.nomor} (a.n. {rek.atas_nama})
+                      </option>
+                    ))}
+                  </select>
+
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setFileDenda(e.target.files?.[0] || null)}
+                    className="border p-2 rounded w-full"
+                  />
+
+                  <Button
+                    onClick={handleUploadDenda}
+                    disabled={!selectedRekeningDenda || !fileDenda || loading}
+                    className="w-full"
+                  >
+                    {loading ? "Memproses..." : "Upload Bukti Pembayaran Denda"}
+                  </Button>
+
+                  <p className="text-xs text-gray-500">
+                    *Jaminan akan dikembalikan setelah pembayaran denda
+                    diverifikasi
+                  </p>
+                </>
+              ) : (
+                <div className="bg-blue-100 p-3 rounded text-blue-700">
+                  ✅ Bukti pembayaran denda sudah diupload. Menunggu verifikasi
+                  admin.
+                </div>
+              )}
+            </div>
+          )}
+
+          {dendaVerified && (
+            <div className="border p-4 rounded bg-green-50">
+              <h4 className="font-semibold text-green-900 flex items-center gap-2">
+                <span>✅</span> Denda Lunas
+              </h4>
+              <p className="text-sm text-green-700 mt-1">
+                Pembayaran denda telah diverifikasi.
+                {detail.jaminan_tipe !== "DEPOSIT_UANG" &&
+                  " Silakan hubungi petugas untuk pengembalian jaminan."}
+              </p>
+              {detail.jaminan_status === "DIKEMBALIKAN" && (
+                <p className="text-sm text-green-600 mt-2 font-medium">
+                  🎉 Jaminan sudah dikembalikan
+                </p>
+              )}
+            </div>
+          )}
+
+          {dendaRejected && (
+            <div className="border p-4 rounded bg-red-50">
+              <h4 className="font-semibold text-red-900">
+                ❌ Pembayaran Denda Ditolak
+              </h4>
+              <p className="text-sm text-red-700 mt-1">
+                Bukti pembayaran ditolak. Silakan upload ulang dengan bukti yang
+                benar.
+              </p>
+              <p className="text-xs text-gray-500 mt-2">
+                Alasan: {dendaRejected.keterangan_ditolak || "Tidak disebutkan"}
+              </p>
+            </div>
           )}
         </div>
       )}

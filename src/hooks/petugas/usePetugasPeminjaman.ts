@@ -205,13 +205,8 @@ export function usePetugasPeminjaman() {
           formData.append("tanggal_kembali", tanggal_kembali);
         }
 
-        items.forEach((item, index) => {
-          formData.append(`items[${index}][barangId]`, item.barangId);
-          formData.append(
-            `items[${index}][kondisi_kembali]`,
-            item.kondisi_kembali,
-          );
-        });
+        // ✅ FIX DI SINI
+        formData.append("items", JSON.stringify(items));
 
         if (file) {
           formData.append("foto_pengembalian", file);

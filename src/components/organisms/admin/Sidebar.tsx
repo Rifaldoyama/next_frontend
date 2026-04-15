@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Gift,
   ChevronRight,
+  Wallet,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -82,6 +83,12 @@ const navItems = [
         label: "Verifikasi Pembayaran",
         icon: ShieldCheck,
         description: "Payment verification",
+      },
+       {
+        href: "/admin/pengembalian-deposit",
+        label: "Pengembalian Deposit",
+        icon: Wallet,
+        description: "Deposit refund management",
       },
       {
         href: "/admin/kel-paket",

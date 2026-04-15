@@ -11,6 +11,7 @@ import {
   CheckCircle,
   Clock,
   Truck,
+  Printer,
 } from "lucide-react";
 import Link from "next/link";
 import { formatRupiah } from "@/lib/format";
@@ -78,7 +79,7 @@ const kondisiOptions = [
 
 export default function DetailPage() {
   const { id } = useParams();
-  const { fetchDetail, returnBarang, handover, actionId } =
+  const { fetchDetail, returnBarang, handover, actionId ,printSurat} =
     usePetugasPeminjaman();
   const [peminjaman, setPeminjaman] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -90,7 +91,6 @@ export default function DetailPage() {
     "",
   );
   const [dendaPreview, setDendaPreview] = useState<Record<string, number>>({});
-
   useEffect(() => {
     const load = async () => {
       try {
@@ -189,6 +189,14 @@ export default function DetailPage() {
     }
   };
 
+  const handlePrint = async () => {
+    try {
+      await printSurat(id as string);
+    } catch (error) {
+      console.error("Gagal cetak surat:", error);
+    }
+  };
+
   const totalDenda = useCallback(() => {
     return Object.values(dendaPreview).reduce(
       (total, denda) => total + denda,
@@ -226,94 +234,115 @@ export default function DetailPage() {
   }
 
   // Handover Form Component
-  const HandoverForm = () => (
-    <div className="min-h-screen bg-gray-50 p-4 text-black">
-      <div className="max-w-lg mx-auto">
-        <div className="flex items-center gap-3 mb-6">
-          <Link
-            href="/petugas"
-            className="p-2 hover:bg-gray-100 rounded-lg transition"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <h1 className="text-xl font-bold">Serah Terima Barang</h1>
-        </div>
+  const HandoverForm = () => {
+    const [isPrinting, setIsPrinting] = useState(false);
 
-        <div className="bg-white rounded-xl shadow-sm p-5 space-y-4">
-          <div className="border-b pb-3">
-            <h2 className="font-semibold text-lg">
-              {peminjaman.user.detail.nama_lengkap}
-            </h2>
-            <p className="text-sm text-gray-500 mt-1">
-              {peminjaman.alamat_acara}
-            </p>
-            <div className="flex gap-3 mt-2 text-xs text-gray-500">
-              <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                {new Date(peminjaman.tanggal_mulai).toLocaleDateString()}
-              </span>
-              <span>→</span>
-              <span>
-                {new Date(peminjaman.tanggal_selesai).toLocaleDateString()}
-              </span>
-            </div>
-          </div>
+    const handlePrint = async () => {
+      setIsPrinting(true);
+      try {
+        await printSurat(id as string);
+      } finally {
+        setIsPrinting(false);
+      }
+    };
 
-          <div>
-            <label className="block text-sm font-medium mb-2 text-gray-700">
-              Kondisi Barang Saat Keluar
-            </label>
-            <select
-              value={handoverKondisi}
-              onChange={(e) =>
-                setHandoverKondisi(e.target.value as KondisiBarang)
-              }
-              className="w-full border rounded-lg p-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">Pilih kondisi</option>
-              {kondisiOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2 text-gray-700">
-              Foto Serah Terima
-            </label>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-500 transition cursor-pointer">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setFile(e.target.files?.[0])}
-                className="hidden"
-                id="handover-photo"
-              />
-              <label
-                htmlFor="handover-photo"
-                className="cursor-pointer flex flex-col items-center"
+    return (
+      <div className="min-h-screen bg-gray-50 p-4 text-black">
+        <div className="max-w-lg mx-auto">
+          {/* Header dengan tombol cetak */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <Link
+                href="/petugas"
+                className="p-2 hover:bg-gray-100 rounded-lg transition"
               >
-                <Camera className="w-8 h-8 text-gray-400 mb-2" />
-                <span className="text-sm text-gray-500">
-                  {file ? file.name : "Klik untuk upload foto"}
-                </span>
-              </label>
+                <ArrowLeft className="w-5 h-5" />
+              </Link>
+              <h1 className="text-xl font-bold">Serah Terima Barang</h1>
             </div>
+
+            {/* ✅ TAMBAHKAN TOMBOL CETAK DI SINI */}
+            <button
+              onClick={handlePrint}
+              disabled={isPrinting}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+            >
+              <Printer className="w-4 h-4" />
+              <span className="text-sm">
+                {isPrinting ? "Memproses..." : "Cetak Surat"}
+              </span>
+            </button>
           </div>
 
-          <button
-            onClick={handleHandoverSubmit}
-            disabled={actionId === id}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50"
-          >
-            {actionId === id ? "Memproses..." : "Konfirmasi Serah Terima"}
-          </button>
+          {/* ✅ TAMBAHKAN INSTRUKSI DI SINI (sebelum form) */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+            <p className="text-sm text-blue-700">
+              📄 <strong>Instruksi:</strong> Cetak surat serah terima terlebih
+              dahulu, minta tanda tangan peminjam, lalu upload foto dan
+              konfirmasi.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm p-5 space-y-4">
+            {/* Kondisi Barang */}
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-700">
+                Kondisi Barang Saat Keluar
+              </label>
+              <select
+                value={handoverKondisi}
+                onChange={(e) =>
+                  setHandoverKondisi(e.target.value as KondisiBarang)
+                }
+                className="w-full border rounded-lg p-3"
+              >
+                <option value="">Pilih kondisi</option>
+                {kondisiOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Foto Upload */}
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-700">
+                Foto Serah Terima (Wajib)
+              </label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setFile(e.target.files?.[0])}
+                  className="hidden"
+                  id="handover-photo"
+                />
+                <label
+                  htmlFor="handover-photo"
+                  className="cursor-pointer flex flex-col items-center"
+                >
+                  <Camera className="w-8 h-8 text-gray-400 mb-2" />
+                  <span className="text-sm text-gray-500">
+                    {file ? file.name : "Klik untuk upload foto"}
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            {/* Tombol Konfirmasi */}
+            <button
+              onClick={handleHandoverSubmit}
+              disabled={actionId === id}
+              className="w-full bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700 transition disabled:opacity-50"
+            >
+              {actionId === id ? "Memproses..." : "Konfirmasi Serah Terima"}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Return Form Component
   const ReturnForm = () => {

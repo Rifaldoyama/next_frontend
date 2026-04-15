@@ -40,6 +40,17 @@ export const RecommendationSection = ({
     setDetailPaket(pkg);
   };
 
+  const calculateOriginalPrice = (pkg: Paket): number => {
+    if (!pkg.items || pkg.items.length === 0) return pkg.harga_final;
+
+    const totalHarga = pkg.items.reduce((sum, item) => {
+      const harga = item.barang?.harga_sewa || item.harga_saat_itu || 0;
+      return sum + harga * item.jumlah;
+    }, 0);
+
+    return totalHarga; // Menghitung dari data barang
+  };
+
   return (
     <section className="relative">
       {/* Section Header */}
@@ -141,13 +152,14 @@ export const RecommendationSection = ({
             </div>
 
             {/* Price */}
-            <div className="flex items-baseline gap-3 flex-wrap">
-              <span className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
-                Rp {detailPaket.harga_final.toLocaleString()}
+            <div className="flex items-baseline gap-3 flex-wrap text-black">
+              <span className="text-2xl font-bold ...">
+                Rp {detailPaket.harga_final.toLocaleString()} {/* 910.800 */}
               </span>
               {detailPaket.diskon_persen > 0 && (
                 <span className="line-through text-gray-400 text-sm">
-                  Rp {detailPaket.total_paket.toLocaleString()}
+                  Rp {calculateOriginalPrice(detailPaket).toLocaleString()}{" "}
+                  {/* 1.012.000 */}
                 </span>
               )}
             </div>

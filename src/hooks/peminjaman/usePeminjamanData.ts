@@ -1,4 +1,4 @@
-"use client";
+ "use client";
 
 import { useState, useCallback } from "react";
 import { apiFetch } from "@/lib/api";
@@ -35,7 +35,7 @@ export interface Pembayaran {
   id: string;
   jumlah: number;
   metode: string;
-  tipe: "DP" | "PELUNASAN";
+  tipe: "DP" | "PELUNASAN" | "FULL" | "DENDA" | "REFUND_DEPOSIT";
   status: "PENDING" | "VERIFIED" | "REJECTED";
   bukti_pembayaran?: string;
 
@@ -48,6 +48,7 @@ export interface Pembayaran {
     atas_nama: string;
   };
   catatan?: string;
+  keterangan_ditolak?: string;
   createdAt: string;
 }
 //untuk menampilkan detail biaya tambahan seperti ongkir, denda
@@ -65,20 +66,16 @@ export interface Peminjaman {
   metode_ambil: "AMBIL_SENDIRI" | "DIANTAR";
   alamat_acara?: string;
   status_pinjam:
-    | "DIAJUKAN"
-    | "DISETUJUI"
-    | "PROSES_PERSIAPAN"
-    | "SIAP_DIAMBIL"
-    | "DIANTAR"
+    | "MENUNGGU_PERSETUJUAN"
+    | "SIAP_DIPROSES"
+    | "DIPROSES"
     | "DIPAKAI"
     | "SELESAI"
     | "DITOLAK";
   status_bayar: string;
-  total_biaya: number;
   nominal_dp: number;
   sisa_tagihan: number;
   biaya_tambahan?: number;
-  total_sewa: number;
 
   nama_rekening_pengembalian?: string;
   bank_pengembalian?: string;
@@ -98,7 +95,22 @@ export interface Peminjaman {
   };
 
   deposit: number;
-  jaminan_tipe: "DEPOSIT_UANG" | "KTP" | "SIM";
+
+  total_tagihan: number; // Total yang harus dibayar (tanpa deposit)
+  total_sewa: number; // Total sewa setelah progressive pricing
+  total_biaya: number; // Total biaya + deposit
+  total_nilai_asli?: number; // Nilai asli sebelum diskon
+  total_hari: number; // Durasi sewa
+
+  // Untuk deposit
+  deposit_kembali?: number;
+  deposit_dikembalikan?: boolean;
+  total_denda?: number;
+
+  // Untuk jaminan
+  jaminan_tipe?: string;
+  jaminan_detail?: string;
+  jaminan_status?: string;
 
   zonaId?: string;
   zona?: {

@@ -28,11 +28,13 @@ export interface Paket {
     paketId: string;
     barangId: string;
     jumlah: number;
+    harga_saat_itu?: number;
 
     barang: {
       nama: string;
       gambar: string | null;
       stok_tersedia: number;
+      harga_sewa: number;
     };
   }>;
 }

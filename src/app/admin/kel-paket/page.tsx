@@ -150,7 +150,7 @@ export default function KelolaPaketPage() {
             </div>
 
             <p className="text-sm text-gray-500">
-              Total: Rp {p.total_paket.toLocaleString()}
+              Total: {p.total_paket.toLocaleString()}
             </p>
 
             <p className="text-sm text-gray-500 mb-4">

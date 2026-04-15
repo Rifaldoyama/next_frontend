@@ -195,7 +195,7 @@ export function PeminjamanDetailModal({
             <div className="w-full sm:w-1/2 space-y-2 border-t pt-4">
               <div className="flex justify-between text-sm text-gray-600">
                 <span>Total Sewa (Multi-Hari)</span>
-                <span>{formatRupiah(currentData.total_biaya - ongkir)}</span>
+                <span>{formatRupiah(currentData.total_sewa)}</span>
               </div>
 
               <div className="flex justify-between text-sm text-gray-600">
@@ -203,18 +203,22 @@ export function PeminjamanDetailModal({
                 <span className="text-blue-600">+ {formatRupiah(ongkir)}</span>
               </div>
 
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Depoist akan di kembalikan</span>
+                <span className="text-red-600">{formatRupiah(currentData.deposit || 0)}</span>
+              </div>
+              
               <div className="flex justify-between font-bold text-lg border-b pb-2">
                 <span>Total Semua</span>
                 <span>
                   {formatRupiah(
-                    currentData.total_biaya + (currentData.deposit || 0),
-                  )}
+                    currentData.total_biaya )}
                 </span>
               </div>
 
               <div className="bg-yellow-50 p-3 rounded-md border border-yellow-200">
                 <div className="flex justify-between text-sm font-bold text-yellow-800">
-                  <span>Wajib DP (30%)</span>
+                  <span>Wajib DP (35%)</span>
                   <span>{formatRupiah(currentData.nominal_dp)}</span>
                 </div>
                 <div className="flex justify-between text-xs text-yellow-700 mt-1">

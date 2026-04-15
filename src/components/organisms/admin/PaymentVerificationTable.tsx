@@ -84,7 +84,7 @@ export function PaymentVerificationTable({
                 </td>
 
                 <td className="p-4 font-bold text-blue-600">
-                  {formatRupiah(p.jumlah)}
+                  {formatRupiah(p.jumlah || 0)}
                 </td>
 
                 {/* STATUS BADGE */}
@@ -136,24 +136,39 @@ export function PaymentVerificationTable({
                 Detail Transaksi
               </h4>
 
+              {/* INFO - GANTI DENGAN INI */}
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <span>Total Sewa:</span>
                 <span className="font-bold">
-                  {formatRupiah(selected.peminjaman?.total_biaya)}
+                  {formatRupiah(selected.peminjaman?.total_sewa)}
                 </span>
 
-                <span>Deposit: </span>
+                <span>Ongkir:</span>
+                <span className="font-bold">
+                  {formatRupiah(
+                    selected.peminjaman?.biayaDetails?.find(
+                      (b: any) => b.tipe === "ONGKIR",
+                    )?.jumlah || 0,
+                  )}
+                </span>
+
+                <span>Deposit:</span>
                 <span className="font-bold text-amber-500">
                   {formatRupiah(selected.peminjaman?.deposit)}
                 </span>
 
-                <span>Total Tagihan: </span>
-                <span className="font-bold ">
-                  {formatRupiah(selected.peminjaman?.total_biaya + selected.peminjaman?.deposit)}
+                <span>Total Tagihan:</span>
+                <span className="font-bold text-blue-600">
+                  {formatRupiah(selected.peminjaman?.total_tagihan)}
+                </span>
+
+                <span>Total Biaya:</span>
+                <span className="font-bold text-gray-600">
+                  {formatRupiah(selected.peminjaman?.total_biaya)}
                 </span>
 
                 <span>Dibayarkan:</span>
-                <span className="font-bold text-blue-600">
+                <span className="font-bold text-green-600">
                   {formatRupiah(selected.jumlah)}
                 </span>
 
@@ -166,6 +181,23 @@ export function PaymentVerificationTable({
                 <span>Status:</span>
                 <span>{getStatusBadge(selected.status)}</span>
               </div>
+
+              {/* Tampilkan breakdown allocation */}
+              {selected.allocations && selected.allocations.length > 0 && (
+                <div className="border-t pt-2 mt-2">
+                  <p className="text-xs text-gray-500 mb-1">
+                    Alokasi Pembayaran:
+                  </p>
+                  {selected.allocations.map((alloc: any, idx: number) => (
+                    <div key={idx} className="flex justify-between text-xs">
+                      <span>{alloc.tipe}:</span>
+                      <span className="font-medium">
+                        {formatRupiah(alloc.jumlah)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* ONLY SHOW BUTTON IF PENDING */}
               {selected.status === "PENDING" && (

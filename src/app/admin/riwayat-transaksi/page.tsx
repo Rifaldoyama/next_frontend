@@ -222,7 +222,10 @@ export default function RiwayatTransaksiPage() {
               <div>
                 <p className="text-sm text-gray-500">Total Pendapatan</p>
                 <p className="text-2xl font-bold text-gray-800">
-                  {formatCurrency(stats.revenue / 1000000)}M
+                  {new Intl.NumberFormat("id-ID", {
+                    notation: "compact",
+                    compactDisplay: "short",
+                  }).format(stats.revenue)}
                 </p>
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -319,7 +322,7 @@ export default function RiwayatTransaksiPage() {
             onClick={handleDownload}
             className="px-4 py-2 bg-green-600 text-white rounded-lg whitespace-nowrap"
           >
-            Download CSV
+            Download Excel
           </button>
         </div>
       </div>

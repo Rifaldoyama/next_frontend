@@ -187,26 +187,150 @@ export function DetailPeminjamanModal({ id, open, onClose }: Props) {
                   </span>
                 </div>
 
+                <div className="flex flex-col sm:flex-row justify-between gap-2">
+                  <span className="text-gray-600">Total Tagihan</span>
+                  <span className="font-medium text-blue-600">
+                    {formatRupiah(detail.total_tagihan || detail.total_sewa)}
+                  </span>
+                </div>
+
                 <div className="flex flex-col sm:flex-row justify-between gap-2 font-semibold text-base">
-                  <span className="text-gray-600">Total</span>
+                  <span className="text-gray-600">Total Biaya</span>
                   <span>{formatRupiah(detail.total_biaya)}</span>
                 </div>
 
                 {detail.deposit > 0 && (
-                  <div className="flex flex-col sm:flex-row justify-between gap-2 text-orange-600 font-medium">
-                    <span>Deposit Jaminan (Dikembalikan)</span>
+                  <div className="flex flex-col sm:flex-row justify-between gap-2 text-orange-600">
+                    <span>Deposit (akan dikembalikan)</span>
                     <span>{formatRupiah(detail.deposit)}</span>
                   </div>
                 )}
 
                 <div className="flex flex-col sm:flex-row justify-between gap-2 font-bold text-lg border-t pt-2 text-blue-700">
-                  <span>Total Kewajiban Awal</span>
+                  <span>Total Yang Harus Dibayar</span>
                   <span>
                     {formatRupiah(
-                      detail.total_sewa + ongkir + (detail.deposit || 0),
+                      (detail.total_tagihan || detail.total_sewa) +
+                        (detail.deposit || 0),
                     )}
                   </span>
                 </div>
+                {/* Info Denda & Deposit */}
+                {detail.status_pinjam === "SELESAI" && (
+                  <div className="border-t pt-4 space-y-3">
+                    <h4 className="font-semibold text-gray-700">
+                      Status Pengembalian
+                    </h4>
+
+                    {/* Deposit */}
+                    {detail.jaminan_tipe === "DEPOSIT_UANG" &&
+                      detail.deposit > 0 && (
+                        <div className="bg-blue-50 p-3 rounded-lg">
+                          <p className="text-sm font-medium text-blue-800 mb-2">
+                            Deposit Jaminan
+                          </p>
+                          <div className="space-y-1 text-sm">
+                            <div className="flex justify-between">
+                              <span>Deposit Awal:</span>
+                              <span>{formatRupiah(detail.deposit)}</span>
+                            </div>
+                            {(detail.total_denda || 0) > 0 && (
+                              <div className="flex justify-between text-red-600">
+                                <span>Potongan Denda:</span>
+                                <span>
+                                  - {formatRupiah(detail.total_denda || 0)}
+                                </span>
+                              </div>
+                            )}
+                            <div className="flex justify-between font-semibold border-t pt-1">
+                              <span>Dikembalikan:</span>
+                              <span
+                                className={
+                                  detail.deposit_dikembalikan
+                                    ? "text-green-600"
+                                    : "text-orange-600"
+                                }
+                              >
+                                {detail.deposit_dikembalikan
+                                  ? formatRupiah(detail.deposit_kembali || 0)
+                                  : "Menunggu admin"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                    {/* Jaminan Fisik + Denda */}
+                    {detail.jaminan_tipe !== "DEPOSIT_UANG" && (
+                      <div className="bg-yellow-50 p-3 rounded-lg">
+                        <p className="text-sm font-medium text-yellow-800 mb-2">
+                          Jaminan {detail.jaminan_tipe}
+                        </p>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span>Detail Jaminan:</span>
+                            <span className="font-medium">
+                              {detail.jaminan_detail || "-"}
+                            </span>
+                          </div>
+                          {(detail.total_denda || 0) > 0 && (
+                            <>
+                              <div className="flex justify-between text-red-600">
+                                <span>Total Denda:</span>
+                                <span className="font-medium">
+                                  {formatRupiah(detail.total_denda || 0)}
+                                </span>
+                              </div>
+                              {(() => {
+                                const dendaPayment = detail.pembayaran?.find(
+                                  (p: any) => p.tipe === "DENDA",
+                                );
+                                return (
+                                  <div className="flex justify-between">
+                                    <span>Status Denda:</span>
+                                    <span
+                                      className={
+                                        !dendaPayment
+                                          ? "text-orange-600"
+                                          : dendaPayment.status === "PENDING"
+                                            ? "text-yellow-600"
+                                            : dendaPayment.status === "VERIFIED"
+                                              ? "text-green-600"
+                                              : "text-red-600"
+                                      }
+                                    >
+                                      {!dendaPayment
+                                        ? "Belum dibayar"
+                                        : dendaPayment.status === "PENDING"
+                                          ? "Menunggu Verifikasi"
+                                          : dendaPayment.status === "VERIFIED"
+                                            ? "Lunas"
+                                            : "Ditolak"}
+                                    </span>
+                                  </div>
+                                );
+                              })()}
+                            </>
+                          )}
+                          <div className="flex justify-between">
+                            <span>Status Jaminan:</span>
+                            <span
+                              className={
+                                detail.jaminan_status === "DIKEMBALIKAN"
+                                  ? "text-green-600"
+                                  : "text-orange-600"
+                              }
+                            >
+                              {detail.jaminan_status === "DIKEMBALIKAN"
+                                ? "Sudah dikembalikan"
+                                : "Belum dikembalikan"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="border-t pt-4">
                   <TransactionPanel

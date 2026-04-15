@@ -84,24 +84,24 @@ export function PaymentStatus({
     );
   }
 
-  // REJECTED
-  if (statusBayar === "REJECTED") {
+  if (statusBayar === "DP_DITERIMA") {
     return (
-      <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg">
-        <span className="font-semibold block mb-1">Pembayaran Ditolak</span>
-        <div className="text-sm">Silahkan upload ulang bukti pembayaran</div>
+      <div className="bg-green-50 border border-green-200 text-green-800 p-3 rounded-lg">
+        <span className="font-semibold block mb-1">DP Diterima</span>
+        <div className="text-sm">
+          Sisa tagihan: Rp {sisaTagihan.toLocaleString()}
+        </div>
       </div>
     );
   }
 
-  // DP DITERIMA
-  if (statusBayar === "DP_DITERIMA") {
+  if (statusBayar === "MENUNGGU_VERIFIKASI_PELUNASAN") {
     return (
-      <div className="bg-green-50 border border-green-200 text-green-800 p-3 rounded-lg">
-        <span className="font-semibold block mb-1">DP diterima</span>
-        <div className="text-sm">
-          Sisa tagihan: Rp {sisaTagihan.toLocaleString()}
-        </div>
+      <div className="bg-blue-50 border border-blue-200 text-blue-800 p-3 rounded-lg">
+        <span className="font-semibold block mb-1">
+          Menunggu Verifikasi Pelunasan
+        </span>
+        <div className="text-sm">Bukti pelunasan sedang diverifikasi admin</div>
       </div>
     );
   }
@@ -111,6 +111,16 @@ export function PaymentStatus({
     return (
       <div className="bg-green-100 border border-green-300 text-green-900 p-3 rounded-lg">
         <span className="font-semibold block">Pembayaran Lunas</span>
+      </div>
+    );
+  }
+
+  // REJECTED
+  if (statusBayar === "REJECTED") {
+    return (
+      <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg">
+        <span className="font-semibold block mb-1">Pembayaran Ditolak</span>
+        <div className="text-sm">Silahkan upload ulang bukti pembayaran</div>
       </div>
     );
   }

@@ -118,15 +118,17 @@ export default function KelolaPeminjamanPage() {
 
               {/* Kolom Tengah: Harga */}
               <div className="text-right mr-4">
-                <div className="text-xs text-gray-500">Total Tagihan</div>
-                <div className="font-bold text-lg text-blue-600">
-                  {formatRupiah(p.total_biaya + p.deposit)}
+                <div className="text-sm text-gray-500">Total Transaksi</div>
+                <div className="font-bold text-lg text-purple-600">
+                  {formatRupiah(p.total_biaya)}
                 </div>
-                {p.metode_ambil === "DIANTAR" && (
+                <div className="text-xs text-gray-400">
+                  Tagihan: {formatRupiah(p.sisa_tagihan)}
+                  {p.deposit > 0 && ` + Deposit ${formatRupiah(p.deposit)}`}
+                </div>
+                {p.metode_ambil === "DIANTAR" && ongkir > 0 && (
                   <div className="text-xs text-gray-400">
-                    {ongkir > 0
-                      ? `Ongkir: ${formatRupiah(ongkir)}`
-                      : "Ongkir belum set"}
+                    Ongkir: {formatRupiah(ongkir)}
                   </div>
                 )}
               </div>
