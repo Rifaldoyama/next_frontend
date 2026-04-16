@@ -67,6 +67,7 @@ export function CompleteProfileGate({ externalOpen, setExternalOpen }: CompleteP
         onComplete={goComplete}
         onSkip={goSkip}
         isRejected={isRejected}
+        onClose={closeForm}
       />
 
       {/* Ini modal form-nya */}

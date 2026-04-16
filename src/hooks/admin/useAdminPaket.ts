@@ -21,7 +21,7 @@ export interface PaketItem {
       nama: string;
       harga_sewa: number;
     };
-  }
+  }[];
   gambar?: string | null;
 }
 

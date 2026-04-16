@@ -6,14 +6,16 @@ export function ConfirmCompleteProfile({
   onComplete,
   onSkip,
   isRejected,
+  onClose
 }: {
   open: boolean;
   onComplete: () => void;
   onSkip: () => void;
   isRejected: boolean;
+  onClose: () => void;
 }) {
   return (
-    <Modal open={open}>
+    <Modal open={open} onClose={onClose}>
       <div className="relative overflow-hidden text-black">
         {/* Background gradasi untuk header area */}
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#ff5b52] to-pink-500" />
