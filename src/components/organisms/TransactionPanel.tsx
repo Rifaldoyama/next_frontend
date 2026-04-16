@@ -331,8 +331,12 @@ export function TransactionPanel({ detail, onRefresh, onSuccess }: Props) {
           <Button onClick={() => handlePrint("DP")}>Cetak Struk DP</Button>
         )}
         {isLunas && (
-          <Button onClick={() => handlePrint("PELUNASAN")}>
-            Cetak Struk Pelunasan
+          <Button onClick={() => {
+            const lastPayment = detail.pembayaran?.find((p: any) => p.status === 'VERIFIED');
+            const receiptType = lastPayment?.tipe === 'FULL' ? 'FULL' : 'PELUNASAN';
+            handlePrint(receiptType);
+          }}>
+            Cetak Struk
           </Button>
         )}
       </div>
